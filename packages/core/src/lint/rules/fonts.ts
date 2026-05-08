@@ -20,6 +20,43 @@ const GENERIC_FAMILIES = new Set([
   "revert",
 ]);
 
+// Fonts pre-bundled as data URIs in the producer (deterministicFonts.ts FONT_ALIASES).
+// These render correctly without @font-face — the producer injects them automatically.
+// Must match the keys in packages/producer/src/services/deterministicFonts.ts exactly.
+const PRODUCER_BUNDLED_FONTS = new Set([
+  "inter",
+  "helvetica neue",
+  "helvetica",
+  "arial",
+  "helvetica bold",
+  "montserrat",
+  "futura",
+  "din alternate",
+  "arial black",
+  "outfit",
+  "nunito",
+  "oswald",
+  "bebas neue",
+  "league gothic",
+  "archivo black",
+  "space mono",
+  "ibm plex mono",
+  "jetbrains mono",
+  "courier new",
+  "courier",
+  "eb garamond",
+  "garamond",
+  "playfair display",
+  "source code pro",
+  "noto sans jp",
+  "noto sans japanese",
+  "roboto",
+  "open sans",
+  "lato",
+  "poppins",
+  "segoe ui",
+]);
+
 function extractFontFaceFamilies(styles: Array<{ content: string }>): Set<string> {
   const families = new Set<string>();
   const fontFaceRe = /@font-face\s*\{[^}]*\}/gi;
@@ -92,7 +129,9 @@ export const fontRules: Array<(ctx: LintContext) => HyperframeLintFinding[]> = [
     const declared = extractFontFaceFamilies(styles);
     const used = extractUsedFontFamilies(styles);
 
-    const undeclared = used.filter((name) => !declared.has(name));
+    const undeclared = used.filter(
+      (name) => !declared.has(name) && !PRODUCER_BUNDLED_FONTS.has(name),
+    );
     if (undeclared.length === 0) return findings;
 
     findings.push({
@@ -100,7 +139,8 @@ export const fontRules: Array<(ctx: LintContext) => HyperframeLintFinding[]> = [
       severity: "warning",
       message:
         `Font ${undeclared.length === 1 ? "family" : "families"} used without @font-face declaration: ${undeclared.join(", ")}. ` +
-        "Without local @font-face, text renders in the browser's fallback font, producing incorrect typography in the video.",
+        "These are not in the auto-resolved font list, so the renderer cannot supply them automatically. " +
+        "Text will fall back to a generic font, producing incorrect typography in the video.",
       fixHint:
         "Add @font-face { font-family: '...'; src: url('../capture/assets/fonts/...woff2'); } " +
         "for each font family, pointing to the captured .woff2 files.",

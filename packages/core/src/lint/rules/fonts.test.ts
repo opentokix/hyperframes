@@ -67,13 +67,34 @@ describe("font rules", () => {
       const html = `<div data-composition-id="test" data-width="1920" data-height="1080">
         <style>
           h1 { font-family: 'Aeonik', sans-serif; }
-          code { font-family: 'IBM Plex Mono', monospace; }
+          code { font-family: 'Feature Deck', monospace; }
         </style>
       </div>`;
       const findings = findByCode(html, "font_family_without_font_face");
       expect(findings).toHaveLength(1);
       expect(findings[0]!.message).toContain("aeonik");
-      expect(findings[0]!.message).toContain("ibm plex mono");
+      expect(findings[0]!.message).toContain("feature deck");
+    });
+
+    it("does not flag fonts the producer has pre-bundled", () => {
+      const html = `<div data-composition-id="test" data-width="1920" data-height="1080">
+        <style>
+          body { font-family: 'Inter', sans-serif; }
+          code { font-family: 'JetBrains Mono', monospace; }
+          h1 { font-family: 'Roboto', sans-serif; }
+        </style>
+      </div>`;
+      const findings = findByCode(html, "font_family_without_font_face");
+      expect(findings).toHaveLength(0);
+    });
+
+    it("still flags Google-Fonts-only fonts not pre-bundled", () => {
+      const html = `<div data-composition-id="test" data-width="1920" data-height="1080">
+        <style>body { font-family: 'Geist', sans-serif; }</style>
+      </div>`;
+      const findings = findByCode(html, "font_family_without_font_face");
+      expect(findings).toHaveLength(1);
+      expect(findings[0]!.message).toContain("geist");
     });
 
     it("is case-insensitive when matching @font-face to font-family", () => {
