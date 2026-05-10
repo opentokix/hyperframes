@@ -89,7 +89,7 @@ export const StoryboardCard = memo(function StoryboardCard({
   const showTitle = detailLevel !== "minimal";
   const showDuration = detailLevel === "normal" || detailLevel === "full";
   const showProgress = isCurrent && detailLevel !== "minimal";
-  const iframeScale = width / 1920;
+  const iframeScale = previewHeight / 1080;
 
   // ── Drag handling ────────────────────────────────────────────────────────
 
