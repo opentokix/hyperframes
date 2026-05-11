@@ -3,11 +3,9 @@
  * manifest at the end of `plan()`, compute the planHash from the frozen
  * artifacts, and return the manifest path.
  *
- * Phase 1 PR 1.1 ships the signature only: there are no callers yet. The
- * function body is added in Phase 3 PR 3.1 when `services/distributed/plan.ts`
- * lands and composes the Phase-1 stages. Keeping the skeleton in this PR
- * means subsequent stage-extraction PRs can grow the `stages/` directory
- * without touching the `producer/src/index.ts` export surface again.
+ * Signature-only skeleton: there are no callers yet. The function body
+ * lands when `services/distributed/plan.ts` is added and composes the
+ * stage primitives.
  *
  * See DISTRIBUTED-RENDERING-PLAN.md §2.1 phase 6, §4.1 directory layout,
  * §4.3 LockedRenderConfig.
@@ -18,9 +16,7 @@ import type { PlanDimensions } from "./planHash.js";
 
 /**
  * The encoder configuration locked in at plan time. Mirrors §4.3
- * LockedRenderConfig in the design doc. Phase 1 declares the shape; Phase 2
- * + Phase 3 populate it from the existing `renderOrchestrator` config and
- * the new closed-GOP encoder args.
+ * LockedRenderConfig in the design doc.
  */
 export interface LockedRenderConfig {
   // Capture
@@ -97,10 +93,9 @@ export interface FreezePlanResult {
  * Freeze a plan directory: write `meta/*.json` + top-level `plan.json`, then
  * compute `planHash` over the canonicalized contents.
  *
- * Skeleton only in Phase 1. Phase 3 PR 3.1 wires this up.
+ * Skeleton — body lands when the distributed-render primitives compose the
+ * stage functions.
  */
 export async function freezePlan(_input: FreezePlanInput): Promise<FreezePlanResult> {
-  throw new Error(
-    "freezePlan is not implemented yet — wired in Phase 3 PR 3.1 (see DISTRIBUTED-RENDERING-PLAN.md §11).",
-  );
+  throw new Error("freezePlan is not implemented yet — see DISTRIBUTED-RENDERING-PLAN.md §11.");
 }

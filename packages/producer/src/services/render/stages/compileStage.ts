@@ -8,9 +8,9 @@
  * `deviceScaleFactor` for supersampling.
  *
  * The probe sub-stage (browser launch, duration discovery, recompile,
- * media reconciliation) is extracted separately in PR 1.3. This stage
- * stops at the point where the in-process renderer formerly entered the
- * `if (needsBrowser)` branch.
+ * media reconciliation) lives in a sibling stage. This stage stops at
+ * the point where the in-process renderer enters the `if (needsBrowser)`
+ * branch.
  *
  * Hard constraints preserved verbatim from the in-process renderer:
  *   - `applyRenderModeHints(cfg, ...)` is allowed to mutate `cfg.forceScreenshot`.
