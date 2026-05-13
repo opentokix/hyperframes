@@ -6,7 +6,7 @@
  */
 
 import { build } from "esbuild";
-import { mkdirSync, rmSync } from "fs";
+import { mkdirSync, rmSync, readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -14,6 +14,13 @@ rmSync("dist", { recursive: true, force: true });
 mkdirSync("dist", { recursive: true });
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
+
+// On Windows, esbuild cannot follow npm package junctions when bundling.
+// Mark all non-workspace dependencies as external — they install via package.json.
+const pkg = JSON.parse(readFileSync(resolve(scriptDir, "package.json"), "utf8"));
+const externalDeps = Object.keys(pkg.dependencies ?? {}).filter(
+  (d) => !d.startsWith("@hyperframes/"),
+);
 
 const workspaceAliasPlugin = {
   name: "workspace-alias",
@@ -36,7 +43,7 @@ await Promise.all([
     platform: "node",
     target: "node22",
     format: "esm",
-    external: ["puppeteer", "esbuild", "postcss"],
+    external: externalDeps,
     plugins: [workspaceAliasPlugin],
     minify: false,
     sourcemap: true,
@@ -48,7 +55,7 @@ await Promise.all([
     platform: "node",
     target: "node22",
     format: "esm",
-    external: ["puppeteer", "esbuild", "postcss"],
+    external: externalDeps,
     plugins: [workspaceAliasPlugin],
     minify: false,
     sourcemap: true,
@@ -58,7 +65,7 @@ await Promise.all([
 ]);
 
 // Copy core runtime artifacts so the producer can find them at dist/
-import { copyFileSync, existsSync, readFileSync } from "fs";
+import { copyFileSync, existsSync } from "fs";
 const coreDistDir = resolve(scriptDir, "../core/dist");
 try {
   const manifestSrc = resolve(coreDistDir, "hyperframe.manifest.json");
