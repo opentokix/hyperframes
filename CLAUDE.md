@@ -22,6 +22,20 @@ bun run test    # Run tests
 
 **This repo uses bun**, not pnpm. Do NOT run `pnpm install` — it creates a `pnpm-lock.yaml` that should not exist. Workspace linking relies on bun's resolution from `"workspaces"` in root `package.json`.
 
+### Studio Build
+
+Always use the dev build locally — source maps, no minification, React dev-mode warnings:
+
+```bash
+bun run --cwd packages/studio build:dev
+```
+
+The production build (`build` without `:dev`) is only run by GitHub Actions for publish. After building, copy to CLI:
+
+```bash
+rm -rf packages/cli/dist/studio && cp -r packages/studio/dist packages/cli/dist/studio
+```
+
 ### Linting & Formatting
 
 This project uses **oxlint** and **oxfmt** (not biome, not eslint, not prettier).

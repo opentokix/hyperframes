@@ -9,7 +9,9 @@ export function registerLintRoutes(api: Hono, adapter: StudioApiAdapter): void {
     const project = await adapter.resolveProject(c.req.param("id"));
     if (!project) return c.json({ error: "not found" }, 404);
     try {
-      const htmlFiles = walkDir(project.dir).filter((f) => f.endsWith(".html"));
+      const htmlFiles = walkDir(project.dir).filter(
+        (f) => f.endsWith(".html") && !f.startsWith(".hyperframes/") && !f.startsWith("node_modules/"),
+      );
       const allFindings: Array<{
         severity: string;
         message: string;

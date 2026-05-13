@@ -256,6 +256,7 @@ export function StudioApp() {
   const { syncPreviewTimelineHotkey, syncPreviewHistoryHotkey } = appHotkeys;
   const handlePreviewIframeRef = useCallback(
     (iframe: HTMLIFrameElement | null) => {
+      if (previewIframeRef.current === iframe) return;
       previewIframeRef.current = iframe;
       setPreviewIframe(iframe);
       syncPreviewTimelineHotkey(iframe);
