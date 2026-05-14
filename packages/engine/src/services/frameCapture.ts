@@ -195,13 +195,19 @@ export async function createCaptureSession(
   // need explicit clip+scale on `Page.captureScreenshot`, so fall back to
   // the screenshot path for any DPR > 1.
   const supersampling = (options.deviceScaleFactor ?? 1) > 1;
-  const preMode: CaptureMode =
-    headlessShell && isLinux && !forceScreenshot && !supersampling ? "beginframe" : "screenshot";
   const requestedGpuMode = config?.browserGpuMode ?? DEFAULT_CONFIG.browserGpuMode;
   const resolvedGpuMode = await resolveBrowserGpuMode(requestedGpuMode, {
     chromePath: headlessShell ?? undefined,
     browserTimeout: config?.browserTimeout,
   });
+  // Mirror the software-renderer guard in `acquireBrowser`: on a software
+  // host the BeginFrame compositor stalls, so build the chromeArgs without
+  // BeginFrame flags up-front. acquireBrowser will also strip them as a
+  // belt-and-braces measure, but doing it here keeps the launch args clean.
+  const preMode: CaptureMode =
+    headlessShell && isLinux && !forceScreenshot && !supersampling && resolvedGpuMode !== "software"
+      ? "beginframe"
+      : "screenshot";
   const chromeArgs = buildChromeArgs(
     { width: options.width, height: options.height, captureMode: preMode },
     { ...config, browserGpuMode: resolvedGpuMode },

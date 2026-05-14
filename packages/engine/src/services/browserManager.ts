@@ -254,7 +254,12 @@ export async function acquireBrowser(
   config?: Partial<
     Pick<
       EngineConfig,
-      "browserTimeout" | "protocolTimeout" | "enableBrowserPool" | "chromePath" | "forceScreenshot"
+      | "browserTimeout"
+      | "protocolTimeout"
+      | "enableBrowserPool"
+      | "chromePath"
+      | "forceScreenshot"
+      | "browserGpuMode"
     >
   >,
 ): Promise<AcquiredBrowser> {
@@ -271,10 +276,30 @@ export async function acquireBrowser(
   // BeginFrame requires chrome-headless-shell AND Linux (crashes on macOS/Windows).
   const isLinux = process.platform === "linux";
   const forceScreenshot = config?.forceScreenshot ?? DEFAULT_CONFIG.forceScreenshot;
+
+  // Resolve browserGpuMode. On software-renderer hosts (no hardware GPU /
+  // SwiftShader) HeadlessExperimental.beginFrame is unreliable — the
+  // compositor stalls indefinitely on shader-heavy frames and the CDP call
+  // times out at protocolTimeout (default 5 min). Force screenshot mode for
+  // the entire process whenever resolveBrowserGpuMode resolves to "software",
+  // independent of platform/binary. Broader than the per-stage HDR guard in
+  // the producer (captureHdrStage's `cfg.forceScreenshot = true`) — that
+  // guard only covered the layered-composite path, not the BeginFrame loop
+  // for SDR content on a software host.
+  //
+  // resolveBrowserGpuMode caches its probe Promise for the process lifetime,
+  // so calling it here is cheap after the first invocation.
+  const browserGpuMode = config?.browserGpuMode ?? DEFAULT_CONFIG.browserGpuMode;
+  const resolvedGpuMode = await resolveBrowserGpuMode(browserGpuMode, {
+    chromePath: headlessShell ?? undefined,
+    browserTimeout: config?.browserTimeout,
+  });
+  const isSoftwareRenderer = resolvedGpuMode === "software";
+
   let captureMode: CaptureMode;
   let executablePath: string | undefined;
 
-  if (headlessShell && isLinux && !forceScreenshot) {
+  if (headlessShell && isLinux && !forceScreenshot && !isSoftwareRenderer) {
     captureMode = "beginframe";
     executablePath = headlessShell;
   } else {
@@ -283,12 +308,29 @@ export async function acquireBrowser(
     executablePath = headlessShell ?? undefined;
   }
 
+  // When falling back to screenshot mode the chromeArgs may still contain
+  // `--enable-begin-frame-control` etc. (caller built them before the GPU
+  // probe resolved). In beginframe-control mode the compositor blocks waiting
+  // for a beginFrame we'll never send, producing blank screenshots — strip
+  // them defensively. No-op if caller already built args for screenshot mode.
+  const launchArgs = captureMode === "screenshot" ? stripBeginFrameFlags(chromeArgs) : chromeArgs;
+
+  if (captureMode === "screenshot" && isSoftwareRenderer && headlessShell && isLinux) {
+    // Log once when the software-renderer guard actually changed the outcome
+    // (Linux + headless-shell available — the only env where beginframe would
+    // have been the default). Silent on the always-screenshot platforms
+    // (macOS, Windows) and on hardware hosts.
+    console.warn(
+      "[BrowserManager] Software GPU detected; forcing screenshot capture mode (HeadlessExperimental.beginFrame stalls on software-rendered compositors).",
+    );
+  }
+
   const ppt = await getPuppeteer();
   const browserTimeout = config?.browserTimeout ?? DEFAULT_CONFIG.browserTimeout;
   const protocolTimeout = config?.protocolTimeout ?? DEFAULT_CONFIG.protocolTimeout;
   let browser = await ppt.launch({
     headless: true,
-    args: chromeArgs,
+    args: launchArgs,
     defaultViewport: null,
     executablePath,
     timeout: browserTimeout,
