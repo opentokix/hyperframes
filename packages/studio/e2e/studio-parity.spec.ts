@@ -263,8 +263,10 @@ test("preview matches render after UI edits", async ({ page, context }) => {
       "-y",
       "-i",
       renderVideoPath,
+      // scale=in_range=tv:out_range=pc: expand limited-range H.264 to full-range so PNG
+      // values match Playwright screenshots (Ubuntu ffmpeg 6.1.1 doesn't auto-expand).
       "-vf",
-      `select=eq(n\\,${t * 30})`,
+      `select=eq(n\\,${t * 30}),scale=in_range=tv:out_range=pc`,
       "-vframes",
       "1",
       resolve(DEBUG_DIR, `render_t${t}.png`),
