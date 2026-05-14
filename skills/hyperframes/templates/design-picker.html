@@ -2350,10 +2350,11 @@
 
           // Vertex shader
           var _sg = window._sgShaders || {};
-          h += '  const vertexShader = `' + (_sg.vertex || '') + '`;\n\n';
+          var vtxSrc = (_sg.vertex || '').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+          h += '  const vertexShader = `' + vtxSrc + '`;\n\n';
 
           var fragSrc = bgpObj.fragmentShader || (_sg[bgpObj.shader]) || (_sg.defaults) || '';
-          h += '  const fragmentShader = `' + fragSrc.replace(/`/g, '\\`') + '`;\n';
+          h += '  const fragmentShader = `' + fragSrc.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$') + '`;\n';
 
           h += '\n  const uniforms = {\n';
           h += '    uTime:{value:0}, uSpeed:{value:' + bgpObj.speed + '}, uDensity:{value:' + bgpObj.density + '}, uStrength:{value:' + bgpObj.strength + '},\n';
