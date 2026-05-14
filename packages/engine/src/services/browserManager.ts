@@ -249,6 +249,29 @@ function logResolvedBrowserGpuMode(resolved: "hardware" | "software", reason: st
   console.error(`[hyperframes] browserGpuMode auto → ${resolved} (${reason})`);
 }
 
+/**
+ * One-shot latch for the "Software GPU detected" warning. The guard fires per
+ * acquire() (each render worker calls acquireBrowser), so without a latch we'd
+ * spam the operator with N copies of the same message on a multi-worker run.
+ * Exported reset for tests.
+ */
+let _softwareGuardWarned = false;
+export function _resetSoftwareGuardWarnedForTests(): void {
+  _softwareGuardWarned = false;
+}
+
+export interface AcquireBrowserOptions {
+  /**
+   * If the caller already resolved `browserGpuMode` (e.g. `frameCapture.ts`
+   * computes it before building chromeArgs), pass the resolved value here so
+   * `acquireBrowser` doesn't redundantly re-resolve from the raw config. The
+   * Promise cache makes the duplicate call cheap, but threading the value
+   * through removes the smell of two parallel resolutions of the same thing
+   * with no static guarantee they agree.
+   */
+  resolvedBrowserGpuMode?: "software" | "hardware";
+}
+
 export async function acquireBrowser(
   chromeArgs: string[],
   config?: Partial<
@@ -262,6 +285,7 @@ export async function acquireBrowser(
       | "browserGpuMode"
     >
   >,
+  options: AcquireBrowserOptions = {},
 ): Promise<AcquiredBrowser> {
   const enablePool = config?.enableBrowserPool ?? DEFAULT_CONFIG.enableBrowserPool;
 
@@ -280,20 +304,27 @@ export async function acquireBrowser(
   // Resolve browserGpuMode. On software-renderer hosts (no hardware GPU /
   // SwiftShader) HeadlessExperimental.beginFrame is unreliable — the
   // compositor stalls indefinitely on shader-heavy frames and the CDP call
-  // times out at protocolTimeout (default 5 min). Force screenshot mode for
-  // the entire process whenever resolveBrowserGpuMode resolves to "software",
-  // independent of platform/binary. Broader than the per-stage HDR guard in
-  // the producer (captureHdrStage's `cfg.forceScreenshot = true`) — that
-  // guard only covered the layered-composite path, not the BeginFrame loop
-  // for SDR content on a software host.
+  // times out at protocolTimeout (default 5 min). Force screenshot mode
+  // whenever resolveBrowserGpuMode resolves to "software", independent of
+  // platform/binary. This is a separate defense from the producer-side
+  // `captureHdrStage` guard (which unconditionally forces screenshot for the
+  // HDR layered-composite path); this guard covers the SDR-render-on-software-
+  // host case that captureHdrStage doesn't touch.
   //
-  // resolveBrowserGpuMode caches its probe Promise for the process lifetime,
-  // so calling it here is cheap after the first invocation.
-  const browserGpuMode = config?.browserGpuMode ?? DEFAULT_CONFIG.browserGpuMode;
-  const resolvedGpuMode = await resolveBrowserGpuMode(browserGpuMode, {
-    chromePath: headlessShell ?? undefined,
-    browserTimeout: config?.browserTimeout,
-  });
+  // If the caller has already resolved the mode (frameCapture.ts does) it
+  // hands us the value via options.resolvedBrowserGpuMode to avoid a second
+  // resolution from raw config. The probe Promise is cached for the process
+  // lifetime so the fallback path is still cheap.
+  let resolvedGpuMode: "software" | "hardware";
+  if (options.resolvedBrowserGpuMode) {
+    resolvedGpuMode = options.resolvedBrowserGpuMode;
+  } else {
+    const browserGpuMode = config?.browserGpuMode ?? DEFAULT_CONFIG.browserGpuMode;
+    resolvedGpuMode = await resolveBrowserGpuMode(browserGpuMode, {
+      chromePath: headlessShell ?? undefined,
+      browserTimeout: config?.browserTimeout,
+    });
+  }
   const isSoftwareRenderer = resolvedGpuMode === "software";
 
   let captureMode: CaptureMode;
@@ -315,11 +346,14 @@ export async function acquireBrowser(
   // them defensively. No-op if caller already built args for screenshot mode.
   const launchArgs = captureMode === "screenshot" ? stripBeginFrameFlags(chromeArgs) : chromeArgs;
 
-  if (captureMode === "screenshot" && isSoftwareRenderer && headlessShell && isLinux) {
-    // Log once when the software-renderer guard actually changed the outcome
-    // (Linux + headless-shell available — the only env where beginframe would
-    // have been the default). Silent on the always-screenshot platforms
-    // (macOS, Windows) and on hardware hosts.
+  // Warn ONLY when the software-renderer guard actually changed the outcome.
+  // Conditions: Linux + headless-shell available + GPU resolved to software +
+  // caller didn't already pick screenshot via forceScreenshot. (If the caller
+  // explicitly set forceScreenshot=true the guard didn't change anything, so
+  // warning would mislead operators into thinking the guard kicked in.)
+  // One-shot per process to avoid spamming multi-worker renders.
+  if (!forceScreenshot && isSoftwareRenderer && headlessShell && isLinux && !_softwareGuardWarned) {
+    _softwareGuardWarned = true;
     console.warn(
       "[BrowserManager] Software GPU detected; forcing screenshot capture mode (HeadlessExperimental.beginFrame stalls on software-rendered compositors).",
     );

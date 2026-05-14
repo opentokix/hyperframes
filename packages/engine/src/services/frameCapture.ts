@@ -213,7 +213,12 @@ export async function createCaptureSession(
     { ...config, browserGpuMode: resolvedGpuMode },
   );
 
-  const { browser, captureMode } = await acquireBrowser(chromeArgs, config);
+  // Thread the already-resolved GPU mode into acquireBrowser so it doesn't
+  // re-resolve from raw config. Promise-cached anyway, but removes the smell
+  // of two parallel resolutions that future refactors could let diverge.
+  const { browser, captureMode } = await acquireBrowser(chromeArgs, config, {
+    resolvedBrowserGpuMode: resolvedGpuMode,
+  });
 
   const page = await browser.newPage();
   // Polyfill esbuild's keepNames helper inside the page.
