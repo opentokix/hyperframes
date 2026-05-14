@@ -47,7 +47,7 @@ const PRISTINE_INDEX_HTML = `<!doctype html>
         top: 200px;
         left: 200px;
         margin: 0;
-        font-family: Inter, sans-serif;
+        font-family: sans-serif;
         font-size: 80px;
         font-weight: 700;
         color: #ffffff;

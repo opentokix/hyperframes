@@ -27,7 +27,7 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: { args: ["--force-color-profile=srgb"] },
+        launchOptions: { args: ["--force-color-profile=srgb", "--font-render-hinting=none"] },
       },
     },
   ],
