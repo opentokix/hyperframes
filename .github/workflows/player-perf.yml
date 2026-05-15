@@ -45,19 +45,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-      - uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            bun-${{ runner.os }}-
-      - run: bun install --frozen-lockfile
-      - run: bun run lint
-      - run: bun run format:check
+      - uses: ./.github/actions/preflight
 
   perf-shards:
     name: "Perf: ${{ matrix.shard }}"
