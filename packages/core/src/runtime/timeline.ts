@@ -473,6 +473,7 @@ export function collectRuntimeTimelinePayload(params: {
       targets?: () => Element[];
       startTime?: () => number;
       duration?: () => number;
+      totalDuration?: () => number;
       parent?: GsapTween;
     };
     const tlWithChildren = masterTimeline as typeof masterTimeline & {
@@ -513,7 +514,9 @@ export function collectRuntimeTimelinePayload(params: {
             tweenStart += parent.startTime();
             parent = parent.parent;
           }
-          const tweenEnd = tweenStart + tween.duration();
+          const tweenDuration =
+            typeof tween.totalDuration === "function" ? tween.totalDuration() : tween.duration();
+          const tweenEnd = tweenStart + tweenDuration;
           if (!Number.isFinite(tweenStart) || !Number.isFinite(tweenEnd)) continue;
           for (const target of tween.targets()) {
             if (!(target instanceof Element)) continue;
