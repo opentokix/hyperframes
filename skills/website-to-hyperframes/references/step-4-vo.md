@@ -64,15 +64,27 @@ After the provider is selected, audition at least 2 voices with the first senten
 **HeyGen TTS:**
 
 - If the HeyGen MCP is available: use the TTS tool directly.
-- If no MCP: call the REST API:
+- If no MCP: use the v3 API (current; v1/v2 deprecated, supported until Oct 2026):
+
   ```bash
-  curl -s -X POST "https://api.heygen.com/v1/voice/generate" \
-    -H "X-Api-Key: $HEYGEN_API_KEY" \
+  # List voices — response shape: { "data": [...], "has_more": bool }
+  # data is a direct list (NOT data.voices — that was v2)
+  curl -s "https://api.heygen.com/v3/voices?engine=starfish&type=public&limit=20" \
+    -H "x-api-key: $HEYGEN_API_KEY" | python3 -c \
+    "import json,sys; v=json.load(sys.stdin)['data']; [print(x['voice_id'], x['name'], x['language']) for x in v[:10]]"
+
+  # Generate audio — returns audio_url + word_timestamps in one call
+  curl -s -X POST "https://api.heygen.com/v3/voices/speech" \
+    -H "x-api-key: $HEYGEN_API_KEY" \
     -H "Content-Type: application/json" \
-    -d '{"text":"First sentence","voice_id":"VOICE_ID"}' \
-    --output narration.mp3
+    -d '{"text":"Your script here","voice_id":"VOICE_ID","speed":1.0}' \
+    | python3 -c "import json,sys; r=json.load(sys.stdin); print(r['audio_url']); open('transcript_raw.json','w').write(json.dumps(r.get('word_timestamps',[]),indent=2))"
+
+  # Then download the audio
+  curl -sL "AUDIO_URL_FROM_ABOVE" --output narration.mp3
   ```
-- Returns word-level timestamps automatically (saves a transcription step).
+
+- Returns word-level timestamps directly in the response — no separate transcription step needed.
 
 **Kokoro (free, local):**
 
@@ -116,6 +128,10 @@ For ElevenLabs and HeyGen TTS, substitutions are usually unnecessary — they ha
 **Also save the exact spoken text** — with pronunciation substitutions applied (e.g., `API` → `A P I`, `$2T` → `two trillion` and etc.) — as `narration.txt` in the same directory. This is the string passed to TTS, distinct from `SCRIPT.md` which is the human-readable creative doc. Having `narration.txt` makes it trivial to regenerate the audio later with a different voice without re-deriving the substitutions. Name it exactly `narration.txt`.
 
 ## Transcribe for word-level timestamps
+
+**If you used HeyGen v3 TTS:** word timestamps were already returned in the generate call (`word_timestamps: [{ word, start, end }]`). Save them as `transcript.json` — the format matches what the beat mapping step expects. No separate transcription step needed.
+
+**If you used ElevenLabs or Kokoro:**
 
 ```bash
 npx hyperframes transcribe narration.wav

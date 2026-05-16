@@ -216,6 +216,15 @@ Format (FORMAT EXAMPLES of structure, not prescriptions — pick based on brand/
 
 The sub-agent reads the named JSON file and implements from `showcase.library_adapters.gsap`. No creative decisions at build time.
 
+### Beat Timing
+
+Two numbers Step 5 needs to wire `data-start` and `data-duration` correctly:
+
+- **HyperShader transition in at:** `[time]s` (the `time:` value in the transitions array for the transition INTO this beat — or 0 for beat 1)
+- **GSAP timeline duration:** `[duration]s` (how long this beat's internal animations run — when does the last tween end?)
+
+Example: `Transition in at: 4.2s · GSAP duration: 5.5s` → Step 5 sets `data-start="4.2" data-duration="5.5"`.
+
 ### Animation Sequence
 
 Millisecond-level choreography for everything in this beat. The sub-agent executes this — it doesn't invent it. Every entrance, hold, camera move, layer event, and exit with a timestamp.

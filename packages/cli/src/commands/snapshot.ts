@@ -223,9 +223,20 @@ async function captureSnapshots(
           ? [duration / 2]
           : Array.from({ length: numFrames }, (_, i) => (i / (numFrames - 1)) * duration);
 
-      // Create output directory
+      // Create output directory and clear previous frames so old captures
+      // don't mix with the current run in contact sheets.
       const snapshotDir = join(projectDir, "snapshots");
       mkdirSync(snapshotDir, { recursive: true });
+      try {
+        const { readdirSync, rmSync } = await import("node:fs");
+        for (const file of readdirSync(snapshotDir)) {
+          if (/\.(png|jpg|jpeg)$/i.test(file)) {
+            rmSync(join(snapshotDir, file), { force: true });
+          }
+        }
+      } catch {
+        /* best-effort clear — proceed even if cleanup fails */
+      }
 
       // Lazily load the engine's <img>-overlay injector. Chrome-headless cannot
       // reliably advance <video>.currentTime mid-seek (the setter is accepted but
