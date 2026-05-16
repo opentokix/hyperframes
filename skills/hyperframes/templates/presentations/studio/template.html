@@ -40,12 +40,12 @@
         /* Slightly lighter near-black for secondary dark surfaces */
         --c-bg-alt: #242422;
         /* Acid yellow: THE light slide background — yellow is the environment, not an accent */
-        --c-bg-light: #f5d200;
+        --c-bg-light: var(--tp-accent, #f5d200);
         /* Slightly cooler yellow for secondary light surfaces */
-        --c-bg-light-alt: #f0cc00;
+        --c-bg-light-alt: var(--tp-accent, #f0cc00);
 
         /* Primary text on dark: acid yellow — the only colour on dark slides */
-        --c-fg: var(--tp-primary, #f5d200);
+        --c-fg: var(--tp-accent, #f5d200);
         /* Secondary text on dark: yellow at 58% opacity — muted but still warm */
         --c-fg-2: rgba(245, 210, 0, 0.58);
         /* Tertiary / hint text on dark: yellow at 32% */

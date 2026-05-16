@@ -114,8 +114,15 @@ def classify_vars(vars_list, scheme):
     if 'tertiary' not in roles:
         candidates = [v for v in analyzed if v['name'] not in used]
         if candidates:
-            # Pick least saturated remaining, or mid-luminance
-            tertiary = min(candidates, key=lambda v: v['s'])
+            if 'accent' in roles:
+                ac_h = roles['accent']['h']
+                def hue_dist(h1, h2):
+                    d = abs(h1 - h2)
+                    return min(d, 360 - d)
+                # Prefer a muted color near the accent hue
+                tertiary = min(candidates, key=lambda v: hue_dist(v['h'], ac_h) + v['s'] * 0.5)
+            else:
+                tertiary = min(candidates, key=lambda v: v['s'])
             roles['tertiary'] = tertiary
             used.add(tertiary['name'])
 

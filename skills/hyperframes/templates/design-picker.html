@@ -2796,15 +2796,16 @@
         var overrideStyle = doc.createElement("style");
         overrideStyle.id = "tp-slide-override";
         overrideStyle.textContent =
-          ".slide, section.slide, div.slide, deck-stage > section { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; min-height: 0 !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; display: block !important; }" +
-          ".slide.tp-active, section.slide.tp-active, div.slide.tp-active, deck-stage > section.tp-active { opacity: 1 !important; visibility: visible !important; display: flex !important; }";
+          ".deck, .slide-deck, .slides-container, deck-stage { width: 100% !important; height: 100% !important; transform: none !important; position: relative !important; overflow: hidden !important; }" +
+          ".slide, section.slide, div.slide, deck-stage > section { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; min-height: 0 !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }" +
+          ".slide.active, section.slide.active, div.slide.active, deck-stage > section.active { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }";
         doc.head.appendChild(overrideStyle);
         doc.body.style.overflow = "hidden";
         doc.documentElement.style.overflow = "hidden";
 
         var slides = doc.querySelectorAll("section.slide, div.slide, .slide, deck-stage > section");
         if (slides.length > 0) {
-          slides[0].classList.add("tp-active");
+          slides.forEach(function(s, i) { if (i === 0) s.classList.add("active"); else s.classList.remove("active"); });
           slides[0].querySelectorAll("*").forEach(function(el) {
             try {
               var cs = win.getComputedStyle(el);
@@ -2831,66 +2832,44 @@
 
       var _heroAnimTimeline = null;
       function tpPreloadGsap(ifr) {
-        if (!ifr || !ifr.contentDocument || !ifr.contentWindow) return;
-        if (ifr.contentWindow.gsap) return;
-        var doc = ifr.contentDocument;
-        var s1 = doc.createElement("script");
-        s1.src = "https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js";
-        s1.onload = function() {
-          var s2 = doc.createElement("script");
-          s2.src = "https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/CustomEase.min.js";
-          s2.onload = function() {
-            ifr.contentWindow.gsap.registerPlugin(ifr.contentWindow.CustomEase);
-          };
-          doc.head.appendChild(s2);
-        };
-        doc.head.appendChild(s1);
+        // GSAP runs in parent — no iframe injection needed
       }
 
       function tpAnimateHero(easeObj) {
         if (_heroAnimTimeline) { _heroAnimTimeline.kill(); _heroAnimTimeline = null; }
         var heroIfr = document.querySelector("#sc-scene-grid iframe");
-        if (!heroIfr || !heroIfr.contentDocument || !heroIfr.contentWindow) return;
-        var win = heroIfr.contentWindow;
-        var doc = heroIfr.contentDocument;
-        if (win.gsap) {
-          _runHeroAnim(win, doc, easeObj);
-        } else {
-          // GSAP not loaded yet — wait for it
-          var check = setInterval(function() {
-            if (win.gsap) { clearInterval(check); _runHeroAnim(win, doc, easeObj); }
-          }, 50);
-          setTimeout(function() { clearInterval(check); }, 3000);
-        }
+        if (!heroIfr || !heroIfr.contentDocument) return;
+        if (typeof gsap === "undefined") return;
+        _runHeroAnim(heroIfr.contentDocument, easeObj);
       }
 
       var _heroAnimEls = [];
-      function _runHeroAnim(win, doc, easeObj) {
-        var gsapRef = win.gsap;
-        if (!gsapRef) return;
+      function _runHeroAnim(doc, easeObj) {
         var isCustom = easeObj.value.indexOf("M") === 0;
         var ease;
-        if (isCustom && win.CustomEase) {
-          win.CustomEase.create("_heroCustom", easeObj.value);
+        if (isCustom && typeof CustomEase !== "undefined") {
+          CustomEase.create("_heroCustom", easeObj.value);
           ease = "_heroCustom";
         } else {
           ease = isCustom ? "power2.out" : easeObj.value;
         }
 
-        // Reset previous animation elements (set visible, no flash)
-        if (_heroAnimEls.length) {
-          gsapRef.set(_heroAnimEls, { opacity: 1, x: 0 });
-          _heroAnimEls = [];
-        }
+        _heroAnimEls.forEach(function(el) {
+          el.style.transform = "";
+          el.style.opacity = "1";
+        });
+        _heroAnimEls = [];
 
-        var activeSlide = doc.querySelector(".tp-active") || doc.querySelector(".slide.active") || doc.querySelector(".slide:first-child");
+        var activeSlide = doc.querySelector(".slide.active") || doc.querySelector(".slide:first-child");
         if (!activeSlide) return;
 
-        // Collect leaf-ish elements worth animating
+        var ifrWin = doc.defaultView;
         var els = [];
         activeSlide.querySelectorAll("*").forEach(function(el) {
-          var cs = win.getComputedStyle(el);
-          if (cs.display === "none" || cs.visibility === "hidden") return;
+          try {
+            var cs = ifrWin.getComputedStyle(el);
+            if (cs.display === "none" || cs.visibility === "hidden") return;
+          } catch(e) { return; }
           var rect = el.getBoundingClientRect();
           if (rect.width < 10 || rect.height < 10) return;
           var tag = el.tagName.toLowerCase();
@@ -2906,12 +2885,12 @@
         if (els.length > 20) els = els.slice(0, 20);
         _heroAnimEls = els;
 
-        var tl = gsapRef.timeline();
+        var tl = gsap.timeline();
         _heroAnimTimeline = tl;
 
         els.forEach(function(el) {
           var rect = el.getBoundingClientRect();
-          gsapRef.set(el, { opacity: 0, x: 1920 - rect.left + 20 });
+          gsap.set(el, { opacity: 0, x: 1920 - rect.left + 20 });
         });
         tl.to(els, {
           opacity: 1,
@@ -2919,7 +2898,13 @@
           duration: 0.8,
           ease: ease,
           stagger: 0.08,
-          delay: 0
+          delay: 0,
+          onComplete: function() {
+            els.forEach(function(el) {
+              el.style.removeProperty("transform");
+              el.style.opacity = "1";
+            });
+          }
         });
       }
 
@@ -3008,7 +2993,7 @@
             wrap.style.cssText = "grid-column:1/-1;position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#000;border-radius:4px;";
             var ifr = document.createElement("iframe");
             ifr.src = "templates/" + pick.slug + "/template.html";
-            ifr.sandbox = "allow-same-origin allow-scripts";
+            ifr.sandbox = "allow-same-origin";
             ifr.style.cssText = "width:1920px;height:1080px;border:none;transform-origin:top left;pointer-events:none;";
             wrap.appendChild(ifr);
             grid.appendChild(wrap);
@@ -3053,9 +3038,14 @@
                       if (heroIfr && heroIfr.contentDocument) {
                         var hSlides = heroIfr.contentDocument.querySelectorAll("section.slide, div.slide, .slide, deck-stage > section");
                         hSlides.forEach(function(s, i) {
-                          s.classList.toggle("tp-active", i === slideIdx);
+                          s.classList.toggle("active", i === slideIdx);
                         });
-                        // Replay entrance animation on new slide
+                        // Reset opacity on newly active slide children
+                        if (hSlides[slideIdx]) {
+                          hSlides[slideIdx].querySelectorAll("*").forEach(function(el) {
+                            try { if (heroIfr.contentWindow.getComputedStyle(el).opacity === "0") el.style.opacity = "1"; } catch(e) {}
+                          });
+                        }
                         var easeObj = picks.easing !== null ? EASINGS[picks.easing] : null;
                         if (easeObj) tpAnimateHero(easeObj);
                       }
@@ -3073,14 +3063,15 @@
                       }
                       var ovr = sDoc.createElement("style");
                       ovr.textContent =
-                        ".slide, section.slide, div.slide, deck-stage > section { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; min-height: 0 !important; opacity: 0 !important; visibility: hidden !important; display: block !important; }" +
-                        ".slide.tp-active, section.slide.tp-active, div.slide.tp-active, deck-stage > section.tp-active { opacity: 1 !important; visibility: visible !important; display: flex !important; }";
+                        ".deck, .slide-deck, .slides-container, deck-stage { width: 100% !important; height: 100% !important; transform: none !important; position: relative !important; overflow: hidden !important; }" +
+                        ".slide, section.slide, div.slide, deck-stage > section { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; min-height: 0 !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }" +
+                        ".slide.active, section.slide.active, div.slide.active, deck-stage > section.active { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }";
                       sDoc.head.appendChild(ovr);
                       sDoc.body.style.overflow = "hidden";
                       sDoc.documentElement.style.overflow = "hidden";
                       var sSlides = sDoc.querySelectorAll("section.slide, div.slide, .slide, deck-stage > section");
+                      sSlides.forEach(function(s, i) { if (i === slideIdx) s.classList.add("active"); else s.classList.remove("active"); });
                       if (sSlides[slideIdx]) {
-                        sSlides[slideIdx].classList.add("tp-active");
                         sSlides[slideIdx].querySelectorAll("*").forEach(function(el) {
                           try { if (sWin.getComputedStyle(el).opacity === "0") el.style.opacity = "1"; } catch(e) {}
                         });
