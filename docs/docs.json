@@ -71,6 +71,7 @@
           {
             "group": "Guides",
             "pages": [
+              "guides/pipeline",
               "guides/html-in-canvas",
               "guides/website-to-video",
               "guides/claude-design",
