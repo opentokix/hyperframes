@@ -296,23 +296,20 @@ html,body {{ margin:0;padding:0;background:var(--bg);color:var(--fg);font-family
     with open(os.path.join(output_dir, 'template.html'), 'w') as f:
         f.write(template_html)
 
-    # Use the neutral user-design template, not a themed one
+    # Copy design.html and summary.html only if they don't already exist.
+    # If the agent crafted them, don't overwrite with the generic template.
     presentations_parent = os.path.dirname(os.path.dirname(base_design_html))
-    user_design_src = os.path.join(presentations_parent, 'user-design', 'design.html')
     dst_design = os.path.join(output_dir, 'design.html')
-    if os.path.exists(user_design_src):
-        src_real = os.path.realpath(user_design_src)
-        dst_real = os.path.realpath(dst_design) if os.path.exists(dst_design) else None
-        if src_real != dst_real:
+    if not os.path.exists(dst_design):
+        user_design_src = os.path.join(presentations_parent, 'user-design', 'design.html')
+        if os.path.exists(user_design_src):
             shutil.copy2(user_design_src, dst_design)
-    elif not os.path.exists(dst_design):
-        shutil.copy2(base_design_html, dst_design)
+        else:
+            shutil.copy2(base_design_html, dst_design)
     dst_summary = os.path.join(output_dir, 'summary.html')
-    user_summary_src = os.path.join(presentations_parent, 'user-design', 'summary.html')
-    if os.path.exists(user_summary_src):
-        src_real = os.path.realpath(user_summary_src)
-        dst_real = os.path.realpath(dst_summary) if os.path.exists(dst_summary) else None
-        if src_real != dst_real:
+    if not os.path.exists(dst_summary):
+        user_summary_src = os.path.join(presentations_parent, 'user-design', 'summary.html')
+        if os.path.exists(user_summary_src):
             shutil.copy2(user_summary_src, dst_summary)
 
 
