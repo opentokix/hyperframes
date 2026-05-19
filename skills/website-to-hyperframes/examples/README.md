@@ -66,11 +66,10 @@ Need a specific technique? Use this table to find the canonical scene.
 | 3D rotation + bloom VFX | `07-html-in-canvas/scene-03-3d-rotation-bloom.html` |
 | Logo stroke-draw entrance | `08-svg-and-path/scene-01-logo-stroke-draw.html` |
 | MotionPath orbit/follow | `08-svg-and-path/scene-03-motion-path.html` |
-| Counter 0→1M with comma format | `09-counters-and-data/scene-01-counter-to-million.html` |
-| Sparkline draw-on | `09-counters-and-data/scene-02-sparkline-draw.html` |
-| Light leak overlay | `10-particles-and-ambient/scene-01-light-leak.html` |
-| Ambient particle drift | `10-particles-and-ambient/scene-03-particle-drift.html` |
-| Camera shake on impact | `10-particles-and-ambient/scene-05-camera-shake.html` |
+| Animated build of a timeline / easing curve diagram | `09-counters-and-data/scene-01-timeline-diagram/` |
+| Scroll-pan pipeline / flow connector diagram | `09-counters-and-data/scene-02-pipeline-diagram/` |
+| Radial bloom / dot grid stagger from center | `10-particles-and-ambient/scene-01-radial-bloom-grid/` |
+| Aurora end-card / radial gradient + particles + tri-color text gradient | `10-particles-and-ambient/scene-02-aurora-end-card/` |
 | CSS 3D flip card | `11-3d-and-parallax/scene-01-3d-flip-card.html` |
 | Parallax depth layers | `11-3d-and-parallax/scene-03-parallax-layers.html` |
 | Three.js rotating geometry | `11-3d-and-parallax/scene-05-three-js-geometry.html` |

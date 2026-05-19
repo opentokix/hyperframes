@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>scene-09-phone-mockups</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Manrope:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; }
+
+    [data-composition-id="scene-09-phone-mockups"] {
+      --ink: #f8fafc;
+      --muted: #8a8f99;
+      --font-display: "Manrope", -apple-system, "SF Pro Display", sans-serif;
+      --font-data: "Geist Mono", "SF Mono", monospace;
+      position: relative;
+      overflow: hidden;
+      color: var(--ink);
+      font-family: var(--font-display);
+      background:
+        radial-gradient(circle at 22% 18%, rgba(255, 184, 124, 0.55), transparent 45%),
+        radial-gradient(circle at 78% 28%, rgba(149, 162, 255, 0.65), transparent 50%),
+        radial-gradient(circle at 65% 85%, rgba(255, 142, 196, 0.55), transparent 50%),
+        radial-gradient(circle at 15% 80%, rgba(120, 220, 200, 0.45), transparent 50%),
+        linear-gradient(160deg, #fbe7d3 0%, #f6d2e3 35%, #d8d8ff 70%, #cfeae4 100%);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    [data-composition-id="scene-09-phone-mockups"] .scene-label {
+      position: absolute;
+      left: 48px;
+      bottom: 36px;
+      font-size: 14px;
+      color: #2a2733;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 500;
+      z-index: 100;
+      font-family: "Manrope", sans-serif;
+      background: rgba(255,255,255,0.55);
+      border: 1px solid rgba(255,255,255,0.4);
+      padding: 8px 14px;
+      border-radius: 100px;
+      backdrop-filter: blur(12px);
+    }
+    [data-composition-id="scene-09-phone-mockups"] .scene-label .accent {
+      color: #1a1424;
+      font-weight: 700;
+    }
+
+    [data-composition-id="scene-09-phone-mockups"] .scene {
+      position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; overflow: hidden;
+    }
+    [data-composition-id="scene-09-phone-mockups"] .scene-content { width: 100%; height: 100%; position: relative; z-index: 1; }
+    [data-composition-id="scene-09-phone-mockups"] .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 320px; z-index: 0; background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.18) 40%, rgba(255,255,255,0) 100%); pointer-events: none; }
+    [data-composition-id="scene-09-phone-mockups"] .blob { position: absolute; border-radius: 50%; filter: blur(40px); opacity: 0.55; pointer-events: none; z-index: 0; }
+    [data-composition-id="scene-09-phone-mockups"] .grain { position: absolute; inset: 0; pointer-events: none; z-index: 50; opacity: 0.07; background-image: radial-gradient(rgba(0,0,0,0.4) 1px, transparent 1.2px), radial-gradient(rgba(255,255,255,0.4) 1px, transparent 1.2px); background-size: 3px 3px, 5px 5px; background-position: 0 0, 1px 2px; mix-blend-mode: multiply; }
+    [data-composition-id="scene-09-phone-mockups"] .stage { position: absolute; inset: 0; perspective: 2200px; perspective-origin: 50% 45%; }
+
+    /* Phone */
+    [data-composition-id="scene-09-phone-mockups"] .phone { position: absolute; width: 360px; height: 740px; transform-style: preserve-3d; will-change: transform, opacity; }
+    [data-composition-id="scene-09-phone-mockups"] .phone-shadow { position: absolute; width: 320px; height: 56px; left: 20px; bottom: -68px; background: radial-gradient(ellipse at center, rgba(0,0,0,0.32), transparent 70%); filter: blur(18px); border-radius: 50%; transform: translateZ(-1px); }
+    [data-composition-id="scene-09-phone-mockups"] .phone-body { position: relative; width: 100%; height: 100%; background: linear-gradient(135deg, #3a3a3d 0%, #1c1c1e 50%, #2c2c2e 100%); border-radius: 52px; padding: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 0 0 4px #1a1a1c, inset 0 0 0 5px rgba(255,255,255,0.06), 0 30px 80px rgba(40,30,60,0.30), 0 8px 22px rgba(0,0,0,0.18); }
+    [data-composition-id="scene-09-phone-mockups"] .btn-vol,
+    [data-composition-id="scene-09-phone-mockups"] .btn-pwr { position: absolute; width: 4px; border-radius: 2px; background: linear-gradient(180deg, #4a4a4e, #2c2c2e); }
+    [data-composition-id="scene-09-phone-mockups"] .btn-vol.up { left: -7px; top: 150px; height: 56px; }
+    [data-composition-id="scene-09-phone-mockups"] .btn-vol.down { left: -7px; top: 220px; height: 56px; }
+    [data-composition-id="scene-09-phone-mockups"] .btn-pwr { right: -7px; top: 180px; height: 80px; }
+    [data-composition-id="scene-09-phone-mockups"] .phone-screen { position: relative; width: 100%; height: 100%; background: #0c0c0d; border-radius: 44px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); }
+    [data-composition-id="scene-09-phone-mockups"] .phone-shine { position: absolute; inset: 0; border-radius: 44px; background: linear-gradient(115deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 18%, transparent 35%, transparent 60%, rgba(255,255,255,0.06) 78%, rgba(255,255,255,0.14) 100%); pointer-events: none; z-index: 30; mix-blend-mode: screen; }
+    [data-composition-id="scene-09-phone-mockups"] .dynamic-island { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 108px; height: 30px; background: #000; border-radius: 18px; z-index: 12; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
+    [data-composition-id="scene-09-phone-mockups"] .status-bar { position: absolute; top: 17px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 30px; font-weight: 600; font-size: 13px; color: #fff; z-index: 13; }
+    [data-composition-id="scene-09-phone-mockups"] .status-bar .icons { display: flex; gap: 4px; align-items: center; font-size: 11px; }
+    [data-composition-id="scene-09-phone-mockups"] .home-ind { position: absolute; bottom: 9px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; background: rgba(255,255,255,0.95); border-radius: 3px; z-index: 15; }
+
+    /* ==== PULSE fitness ride summary (Scene 1 hero — generic, no Strava trademarks) ==== */
+    [data-composition-id="scene-09-phone-mockups"] .pulse { padding: 50px 0 30px; height: 100%; background: linear-gradient(180deg, #ff4d2e 0%, #ff8a4a 100%); display: flex; flex-direction: column; }
+    [data-composition-id="scene-09-phone-mockups"] .pulse-top { display: flex; align-items: center; justify-content: space-between; padding: 0 18px; height: 28px; color: white; font-size: 11px; }
+    [data-composition-id="scene-09-phone-mockups"] .pulse-share { background: rgba(255,255,255,0.2); border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; }
+    [data-composition-id="scene-09-phone-mockups"] .pulse-card { margin: 14px 14px 0; background: white; border-radius: 14px; padding: 14px 14px 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.18); flex: 1; display: flex; flex-direction: column; }
+    [data-composition-id="scene-09-phone-mockups"] .athlete { display: flex; align-items: center; gap: 8px; }
+    [data-composition-id="scene-09-phone-mockups"] .athlete-pic { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #ff4d2e, #ff8a4a); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 13px; }
+    [data-composition-id="scene-09-phone-mockups"] .athlete-info { display: flex; flex-direction: column; }
+    [data-composition-id="scene-09-phone-mockups"] .athlete-name { font-size: 12px; font-weight: 700; color: #1a1a1a; }
+    [data-composition-id="scene-09-phone-mockups"] .athlete-meta { font-size: 9px; color: #777; }
+    [data-composition-id="scene-09-phone-mockups"] .ride-title { margin-top: 10px; font-size: 16px; font-weight: 800; color: #1a1a1a; line-height: 1.15; }
+    [data-composition-id="scene-09-phone-mockups"] .ride-subtitle { font-size: 10px; color: #ff4d2e; font-weight: 600; margin-top: 1px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    [data-composition-id="scene-09-phone-mockups"] .map-wrap { position: relative; margin-top: 10px; height: 120px; border-radius: 10px; overflow: hidden; background: linear-gradient(180deg, #e9e3d4 0%, #d6d0c0 100%); }
+    [data-composition-id="scene-09-phone-mockups"] .map-wrap::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px); background-size: 16px 16px; }
+    [data-composition-id="scene-09-phone-mockups"] .map-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    [data-composition-id="scene-09-phone-mockups"] .map-pin { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: white; border: 2px solid #ff4d2e; }
+
+    [data-composition-id="scene-09-phone-mockups"] .ride-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }
+    [data-composition-id="scene-09-phone-mockups"] .ride-metric { text-align: center; }
+    [data-composition-id="scene-09-phone-mockups"] .rm-val { font-family: var(--font-data); font-weight: 600; font-size: 18px; color: #1a1a1a; font-variant-numeric: tabular-nums; line-height: 1; }
+    [data-composition-id="scene-09-phone-mockups"] .rm-unit { font-size: 9px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+    [data-composition-id="scene-09-phone-mockups"] .ride-actions { display: flex; gap: 16px; padding-top: 10px; margin-top: auto; border-top: 1px solid #f0f0f0; }
+    [data-composition-id="scene-09-phone-mockups"] .ride-action { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #555; }
+    [data-composition-id="scene-09-phone-mockups"] .ride-kudos { color: #ff4d2e; font-weight: 700; }
+
+    [data-composition-id="scene-09-phone-mockups"] .map-park { fill: #cbe3b8; }
+    [data-composition-id="scene-09-phone-mockups"] .map-water { fill: #bcd6ec; }
+    [data-composition-id="scene-09-phone-mockups"] .map-road { stroke: #ffffff; stroke-width: 2.2; fill: none; opacity: 0.8; }
+    [data-composition-id="scene-09-phone-mockups"] .map-road-minor { stroke: #ffffff; stroke-width: 1.2; fill: none; opacity: 0.7; }
+    [data-composition-id="scene-09-phone-mockups"] .ride-stat-strip { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 8px 10px; background: #fff7ef; border-radius: 8px; }
+    [data-composition-id="scene-09-phone-mockups"] .rss-item { display: flex; flex-direction: column; }
+    [data-composition-id="scene-09-phone-mockups"] .rss-label { font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 0.08em; }
+    [data-composition-id="scene-09-phone-mockups"] .rss-val { font-family: var(--font-data); font-size: 11px; font-weight: 600; color: #1a1a1a; font-variant-numeric: tabular-nums; }
+
+    /* ==== ECHO music player (Scene 2 hero — generic, no Spotify trademarks) ==== */
+    [data-composition-id="scene-09-phone-mockups"] .echo { padding: 46px 16px 20px; height: 100%; background: linear-gradient(180deg, #d96b8d 0%, #4a3878 50%, #1a1430 100%); display: flex; flex-direction: column; }
+    [data-composition-id="scene-09-phone-mockups"] .echo-head { display: flex; align-items: center; justify-content: space-between; height: 24px; padding: 0 4px; color: white; font-size: 14px; }
+    [data-composition-id="scene-09-phone-mockups"] .echo-head-mid { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+    [data-composition-id="scene-09-phone-mockups"] .echo-head-mid .lbl { font-size: 8px; color: rgba(255,255,255,0.7); letter-spacing: 0.1em; text-transform: uppercase; }
+    [data-composition-id="scene-09-phone-mockups"] .echo-head-mid .play-from { font-size: 11px; color: white; font-weight: 700; }
+
+    [data-composition-id="scene-09-phone-mockups"] .echo-cover { width: 200px; height: 200px; border-radius: 6px; margin: 18px auto 0; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,0.5); position: relative; background: linear-gradient(180deg, #1f4d8a 0%, #2c1856 100%); }
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.95); }
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud::before,
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud::after { content: ""; position: absolute; background: rgba(255,255,255,0.95); border-radius: 50%; }
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud.c1 { width: 38px; height: 22px; top: 26px; left: 22px; }
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud.c1::before { width: 22px; height: 22px; top: -10px; left: 6px; }
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud.c2 { width: 50px; height: 26px; top: 14px; right: 18px; }
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud.c2::before { width: 26px; height: 26px; top: -12px; left: 12px; }
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud.c3 { width: 32px; height: 18px; bottom: 30px; left: 18px; }
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud.c4 { width: 44px; height: 24px; bottom: 16px; right: 16px; }
+    [data-composition-id="scene-09-phone-mockups"] .cv-cloud.c4::before { width: 22px; height: 22px; top: -10px; right: 8px; }
+    [data-composition-id="scene-09-phone-mockups"] .cv-title { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; font-family: "Manrope", cursive; font-weight: 900; font-style: italic; font-size: 36px; color: #ff6f9c; letter-spacing: 0.01em; text-shadow: 2px 2px 0 white, -2px -2px 0 white, -2px 2px 0 white, 2px -2px 0 white, 0 4px 0 rgba(0,0,0,0.15); z-index: 2; transform-origin: center; }
+    [data-composition-id="scene-09-phone-mockups"] .cv-explicit { position: absolute; bottom: 6px; right: 6px; z-index: 3; font-size: 7px; font-weight: 800; color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.45); padding: 2px 4px; border-radius: 2px; }
+
+    [data-composition-id="scene-09-phone-mockups"] .echo-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 0 4px; }
+    [data-composition-id="scene-09-phone-mockups"] .song-title { font-weight: 800; font-size: 18px; color: white; letter-spacing: -0.01em; }
+    [data-composition-id="scene-09-phone-mockups"] .song-artist { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 1px; }
+    [data-composition-id="scene-09-phone-mockups"] .echo-check { width: 22px; height: 22px; border-radius: 50%; background: #b478ff; display: flex; align-items: center; justify-content: center; color: black; font-size: 13px; font-weight: 800; }
+
+    [data-composition-id="scene-09-phone-mockups"] .progress-row { width: 100%; margin-top: 12px; padding: 0 4px; }
+    [data-composition-id="scene-09-phone-mockups"] .progress-track { width: 100%; height: 3px; background: rgba(255,255,255,0.25); border-radius: 2px; position: relative; }
+    [data-composition-id="scene-09-phone-mockups"] .progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 32%; background: white; border-radius: 2px; }
+    [data-composition-id="scene-09-phone-mockups"] .progress-knob { position: absolute; top: 50%; width: 10px; height: 10px; background: white; border-radius: 50%; transform: translate(-50%, -50%); left: 32%; }
+    [data-composition-id="scene-09-phone-mockups"] .progress-times { display: flex; justify-content: space-between; margin-top: 5px; font-family: var(--font-data); font-size: 9px; color: rgba(255,255,255,0.6); font-variant-numeric: tabular-nums; }
+
+    [data-composition-id="scene-09-phone-mockups"] .controls { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding: 0 18px; color: white; }
+    [data-composition-id="scene-09-phone-mockups"] .ctrl { font-size: 16px; opacity: 0.95; }
+    [data-composition-id="scene-09-phone-mockups"] .ctrl.shuffle { color: #b478ff; font-size: 14px; }
+    [data-composition-id="scene-09-phone-mockups"] .play-btn { width: 50px; height: 50px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+
+    [data-composition-id="scene-09-phone-mockups"] .echo-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding: 0 8px; color: white; font-size: 11px; }
+    [data-composition-id="scene-09-phone-mockups"] .device-pill { display: flex; align-items: center; gap: 5px; color: #b478ff; font-weight: 600; }
+    [data-composition-id="scene-09-phone-mockups"] .lyrics-card { margin-top: 10px; background: linear-gradient(135deg, #5d8868, #3a4d40); border-radius: 8px; padding: 10px 12px; height: 36px; display: flex; align-items: center; justify-content: space-between; }
+    [data-composition-id="scene-09-phone-mockups"] .lyrics-card .lyr { font-size: 12px; color: white; font-weight: 700; }
+    [data-composition-id="scene-09-phone-mockups"] .lyrics-card .lyr-tag { font-size: 9px; color: rgba(255,255,255,0.7); }
+
+    [data-composition-id="scene-09-phone-mockups"] .waveform { display: flex; align-items: flex-end; justify-content: center; gap: 2px; margin-top: 12px; padding: 0 4px; height: 32px; }
+    [data-composition-id="scene-09-phone-mockups"] .waveform .bar { flex: 1; background: #b478ff; border-radius: 1px; min-height: 2px; transform-origin: bottom center; }
+
+    /* ==== Calendar (Scene 1 RIGHT phone) ==== */
+    [data-composition-id="scene-09-phone-mockups"] .cal { padding: 50px 16px 26px; height: 100%; background: linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%); }
+    [data-composition-id="scene-09-phone-mockups"] .cal-month { font-size: 10px; color: #ff4d2e; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-title { font-size: 22px; font-weight: 800; color: #111; margin-top: 2px; letter-spacing: -0.02em; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-dow { font-size: 8px; color: #888; text-align: center; padding: 2px 0; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-day { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #333; border-radius: 8px; position: relative; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-day.muted { color: #ccc; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-day.event { background: rgba(255,77,46,0.08); color: #ff4d2e; font-weight: 700; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-day.today { background: #ff4d2e; color: white; font-weight: 700; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-events { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-event { background: white; border-left: 3px solid #ff4d2e; border-radius: 6px; padding: 6px 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    [data-composition-id="scene-09-phone-mockups"] .cal-ev-time { font-family: var(--font-data); font-size: 9px; color: #888; }
+    [data-composition-id="scene-09-phone-mockups"] .cal-ev-title { font-size: 11px; font-weight: 700; color: #1a1a1a; }
+
+    /* ==== Activity tile (Scene 1 LEFT phone — generic, no external assets) ==== */
+    [data-composition-id="scene-09-phone-mockups"] .activity { padding: 50px 14px 26px; height: 100%; background: linear-gradient(180deg, #f6f4ef 0%, #ecebe6 100%); display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+    [data-composition-id="scene-09-phone-mockups"] .act-top { display: flex; justify-content: space-between; align-items: center; }
+    [data-composition-id="scene-09-phone-mockups"] .act-title { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: #111; letter-spacing: -0.02em; }
+    [data-composition-id="scene-09-phone-mockups"] .act-pill { background: #ff4d2e; color: white; font-size: 10px; font-weight: 600; padding: 5px 10px; border-radius: 100px; }
+    [data-composition-id="scene-09-phone-mockups"] .act-rings { display: flex; align-items: center; justify-content: center; padding: 8px 0; }
+    [data-composition-id="scene-09-phone-mockups"] .act-rings svg { width: 130px; height: 130px; }
+    [data-composition-id="scene-09-phone-mockups"] .act-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    [data-composition-id="scene-09-phone-mockups"] .act-stat { background: white; border-radius: 10px; padding: 8px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    [data-composition-id="scene-09-phone-mockups"] .act-stat .lbl { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+    [data-composition-id="scene-09-phone-mockups"] .act-stat .val { font-family: var(--font-data); font-size: 14px; font-weight: 700; color: #1a1a1a; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    [data-composition-id="scene-09-phone-mockups"] .act-stat .delta { font-size: 9px; color: #5cc16a; font-weight: 700; }
+    [data-composition-id="scene-09-phone-mockups"] .act-section-head { font-size: 13px; font-weight: 800; color: #111; margin-top: 4px; letter-spacing: -0.01em; }
+    [data-composition-id="scene-09-phone-mockups"] .act-list { display: flex; flex-direction: column; gap: 4px; }
+    [data-composition-id="scene-09-phone-mockups"] .act-row { background: white; border-radius: 8px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    [data-composition-id="scene-09-phone-mockups"] .act-row .name { font-size: 11px; font-weight: 700; color: #1a1a1a; }
+    [data-composition-id="scene-09-phone-mockups"] .act-row .meta { font-size: 9px; color: #888; }
+    [data-composition-id="scene-09-phone-mockups"] .act-row .badge { font-family: var(--font-data); font-size: 11px; font-weight: 700; color: #ff4d2e; }
+
+    /* ==== Notes app (Scene 2 LEFT phone) ==== */
+    [data-composition-id="scene-09-phone-mockups"] .notes { padding: 50px 16px 26px; height: 100%; background: linear-gradient(180deg, #1c1c1e 0%, #0f0f0f 100%); display: flex; flex-direction: column; gap: 8px; }
+    [data-composition-id="scene-09-phone-mockups"] .notes-top { display: flex; align-items: center; justify-content: space-between; color: #f6c33b; font-size: 12px; }
+    [data-composition-id="scene-09-phone-mockups"] .notes-back { font-size: 14px; }
+    [data-composition-id="scene-09-phone-mockups"] .note-title { font-size: 18px; font-weight: 800; color: white; margin-top: 4px; line-height: 1.1; }
+    [data-composition-id="scene-09-phone-mockups"] .note-meta { font-size: 9px; color: #888; }
+    [data-composition-id="scene-09-phone-mockups"] .note-body { font-size: 12px; color: rgba(255,255,255,0.85); line-height: 1.5; margin-top: 8px; }
+    [data-composition-id="scene-09-phone-mockups"] .note-body .hl { background: rgba(246,195,59,0.2); padding: 1px 3px; border-radius: 3px; color: #f6c33b; }
+    [data-composition-id="scene-09-phone-mockups"] .note-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+    [data-composition-id="scene-09-phone-mockups"] .note-list .item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,0.85); }
+    [data-composition-id="scene-09-phone-mockups"] .note-list .item .check { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid #555; display: flex; align-items: center; justify-content: center; font-size: 10px; color: black; flex-shrink: 0; }
+    [data-composition-id="scene-09-phone-mockups"] .note-list .item.done .check { background: #f6c33b; border-color: #f6c33b; }
+    [data-composition-id="scene-09-phone-mockups"] .note-list .item.done .label { text-decoration: line-through; color: #777; }
+
+    /* ==== Health/visualizer card (Scene 2 RIGHT phone — generic, replaces Camera asset) ==== */
+    [data-composition-id="scene-09-phone-mockups"] .vis { padding: 50px 16px 26px; height: 100%; background: linear-gradient(180deg, #0a0418 0%, #1d0c3c 50%, #2d1654 100%); display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden; }
+    [data-composition-id="scene-09-phone-mockups"] .vis::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 35%, rgba(180,120,255,0.35), transparent 55%), radial-gradient(circle at 70% 80%, rgba(255,111,156,0.3), transparent 55%); pointer-events: none; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-top { display: flex; align-items: center; justify-content: space-between; color: white; font-size: 11px; z-index: 2; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-badge { background: rgba(180,120,255,0.25); color: #d4b3ff; padding: 3px 8px; border-radius: 12px; font-weight: 600; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-title { font-size: 20px; font-weight: 800; color: white; letter-spacing: -0.02em; z-index: 2; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-meta { font-size: 9px; color: rgba(255,255,255,0.6); z-index: 2; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-orb { position: relative; height: 140px; margin: 8px 0; z-index: 2; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-orb svg { width: 100%; height: 100%; display: block; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-equalizer { display: flex; align-items: flex-end; justify-content: center; gap: 3px; height: 60px; z-index: 2; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-equalizer .eqbar { width: 6px; background: linear-gradient(180deg, #ff6f9c, #b478ff); border-radius: 2px; min-height: 4px; transform-origin: bottom center; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; z-index: 2; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-stat { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 6px 8px; text-align: center; backdrop-filter: blur(8px); }
+    [data-composition-id="scene-09-phone-mockups"] .vis-stat .l { font-size: 8px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.06em; }
+    [data-composition-id="scene-09-phone-mockups"] .vis-stat .v { font-family: var(--font-data); font-size: 13px; font-weight: 700; color: white; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+    /* Caption */
+    [data-composition-id="scene-09-phone-mockups"] .caption { position: absolute; left: 50%; transform: translateX(-50%); bottom: 100px; text-align: center; z-index: 5; }
+    [data-composition-id="scene-09-phone-mockups"] .caption .kicker { display: inline-block; font-family: var(--font-data); font-weight: 500; font-size: 12px; letter-spacing: 0.24em; color: #2a2733; text-transform: uppercase; padding: 7px 16px; background: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.4); border-radius: 100px; backdrop-filter: blur(12px); box-shadow: 0 6px 20px rgba(80,60,140,0.12); }
+    [data-composition-id="scene-09-phone-mockups"] .caption .title { display: block; margin-top: 14px; font-family: var(--font-display); font-weight: 800; font-size: 46px; color: #1a1424; letter-spacing: -0.02em; text-shadow: 0 2px 14px rgba(255,255,255,0.4); }
+  </style>
+</head>
+<body>
+
+  <div id="scene-09-phone-mockups"
+       data-composition-id="scene-09-phone-mockups"
+       data-start="0"
+       data-duration="5"
+       data-width="1920"
+       data-height="1080"
+       style="width:1920px; height:1080px;">
+
+    <!-- ====== SCENE 1 — Pulse fitness ride summary (0-2s) ====== -->
+    <div class="scene clip" id="s1">
+      <div class="grain"></div>
+      <div class="floor"></div>
+      <div class="blob" style="width: 380px; height: 380px; top: -80px; left: -60px; background: #ffb47a;"></div>
+      <div class="blob" style="width: 460px; height: 460px; bottom: -120px; right: -120px; background: #a89bff;"></div>
+      <div class="blob" style="width: 280px; height: 280px; top: 140px; right: 220px; background: #ff89c0;"></div>
+
+      <div class="scene-content">
+        <div class="stage">
+          <!-- LEFT: Activity rings + workouts (replaces Photos asset-heavy view) -->
+          <div class="phone" id="s1-pL" style="left: 150px; top: 140px; transform: rotateY(24deg) rotateX(4deg) rotateZ(-3deg) translateZ(-80px) scale(1.12);">
+            <div class="phone-shadow"></div>
+            <div class="phone-body">
+              <div class="btn-vol up"></div><div class="btn-vol down"></div><div class="btn-pwr"></div>
+              <div class="phone-screen">
+                <div class="dynamic-island"></div>
+                <div class="status-bar"><span>9:41</span><span class="icons">●●● ◐ ▮</span></div>
+                <div class="activity">
+                  <div class="act-top">
+                    <div class="act-title">Activity</div>
+                    <div class="act-pill">+ Workout</div>
+                  </div>
+                  <div class="act-rings">
+                    <svg viewBox="0 0 130 130">
+                      <circle cx="65" cy="65" r="56" stroke="rgba(255,77,46,0.15)" stroke-width="10" fill="none"/>
+                      <circle id="s1-ring-move" cx="65" cy="65" r="56" stroke="#ff4d2e" stroke-width="10" fill="none"
+                              stroke-linecap="round" stroke-dasharray="351.86" stroke-dashoffset="351.86"
+                              transform="rotate(-90 65 65)"/>
+                      <circle cx="65" cy="65" r="42" stroke="rgba(149,233,189,0.15)" stroke-width="10" fill="none"/>
+                      <circle id="s1-ring-exer" cx="65" cy="65" r="42" stroke="#95e9bd" stroke-width="10" fill="none"
+                              stroke-linecap="round" stroke-dasharray="263.89" stroke-dashoffset="263.89"
+                              transform="rotate(-90 65 65)"/>
+                      <circle cx="65" cy="65" r="28" stroke="rgba(91,217,255,0.15)" stroke-width="10" fill="none"/>
+                      <circle id="s1-ring-stand" cx="65" cy="65" r="28" stroke="#5bd9ff" stroke-width="10" fill="none"
+                              stroke-linecap="round" stroke-dasharray="175.93" stroke-dashoffset="175.93"
+                              transform="rotate(-90 65 65)"/>
+                    </svg>
+                  </div>
+                  <div class="act-stats">
+                    <div class="act-stat">
+                      <div class="lbl">Daily km</div>
+                      <div class="val" id="s1-act-km">0</div>
+                      <div class="delta">▲ 18%</div>
+                    </div>
+                    <div class="act-stat">
+                      <div class="lbl">Active</div>
+                      <div class="val" id="s1-act-min">0m</div>
+                      <div class="delta">▲ 9%</div>
+                    </div>
+                  </div>
+                  <div class="act-section-head">This week</div>
+                  <div class="act-list">
+                    <div class="act-row"><div><div class="name">Sunrise loop</div><div class="meta">Mon · 7:14 AM</div></div><div class="badge">24 KM</div></div>
+                    <div class="act-row"><div><div class="name">Trail recovery</div><div class="meta">Wed · 6:02 AM</div></div><div class="badge">12 KM</div></div>
+                  </div>
+                </div>
+                <div class="home-ind"></div>
+                <div class="phone-shine"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Calendar with events -->
+          <div class="phone" id="s1-pR" style="right: 120px; top: 180px; transform: rotateY(-28deg) rotateX(4deg) rotateZ(5deg) translateZ(-110px) scale(1.08);">
+            <div class="phone-shadow"></div>
+            <div class="phone-body">
+              <div class="btn-vol up"></div><div class="btn-vol down"></div><div class="btn-pwr"></div>
+              <div class="phone-screen">
+                <div class="dynamic-island"></div>
+                <div class="status-bar"><span>9:41</span><span class="icons">●●● ◐ ▮</span></div>
+                <div class="cal">
+                  <div class="cal-month">April 2026</div>
+                  <div class="cal-title">Today</div>
+                  <div class="cal-grid">
+                    <div class="cal-dow">M</div><div class="cal-dow">T</div><div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div><div class="cal-dow">S</div>
+                    <div class="cal-day muted">31</div><div class="cal-day">1</div><div class="cal-day">2</div><div class="cal-day">3</div><div class="cal-day">4</div><div class="cal-day">5</div><div class="cal-day">6</div>
+                    <div class="cal-day">7</div><div class="cal-day event">8</div><div class="cal-day">9</div><div class="cal-day">10</div><div class="cal-day event">11</div><div class="cal-day">12</div><div class="cal-day">13</div>
+                    <div class="cal-day">14</div><div class="cal-day">15</div><div class="cal-day event">16</div><div class="cal-day">17</div><div class="cal-day">18</div><div class="cal-day event">19</div><div class="cal-day">20</div>
+                    <div class="cal-day">21</div><div class="cal-day">22</div><div class="cal-day">23</div><div class="cal-day today" id="s1-today">24</div><div class="cal-day">25</div><div class="cal-day">26</div><div class="cal-day">27</div>
+                  </div>
+                  <div class="cal-events">
+                    <div class="cal-event"><div class="cal-ev-time">7:00 AM</div><div class="cal-ev-title">Sunrise loop</div></div>
+                    <div class="cal-event"><div class="cal-ev-time">12:30 PM</div><div class="cal-ev-title">Lunch w/ Maya</div></div>
+                  </div>
+                </div>
+                <div class="home-ind"></div>
+                <div class="phone-shine"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CENTER: Pulse ride summary -->
+          <div class="phone" id="s1-pC" style="left: 50%; top: 110px; margin-left: -180px; transform: rotateY(-6deg) rotateX(2deg) translateZ(40px);">
+            <div class="phone-shadow"></div>
+            <div class="phone-body">
+              <div class="btn-vol up"></div><div class="btn-vol down"></div><div class="btn-pwr"></div>
+              <div class="phone-screen">
+                <div class="dynamic-island"></div>
+                <div class="status-bar"><span>9:41</span><span class="icons">●●● ◐ ▮</span></div>
+                <div class="pulse">
+                  <div class="pulse-top">
+                    <span>‹ Feed</span>
+                    <span>Today's Ride</span>
+                    <div class="pulse-share">↗</div>
+                  </div>
+                  <div class="pulse-card">
+                    <div class="athlete">
+                      <div class="athlete-pic">A</div>
+                      <div class="athlete-info">
+                        <div class="athlete-name">Alex Park</div>
+                        <div class="athlete-meta">Mon, Apr 24 · 7:14 AM</div>
+                      </div>
+                    </div>
+                    <div class="ride-title">Sunrise loop along the river</div>
+                    <div class="ride-subtitle">Morning ride</div>
+                    <div class="map-wrap" style="background: linear-gradient(180deg, #e3dccb 0%, #d6ccb3 100%);">
+                      <svg viewBox="0 0 280 120" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">
+                        <rect x="0" y="0" width="280" height="120" fill="#ede5d0"/>
+                        <path class="map-park" d="M 12 8 L 88 10 L 94 52 L 40 66 L 14 54 Z"/>
+                        <path class="map-park" d="M 180 70 L 268 62 L 270 110 L 196 114 Z"/>
+                        <path class="map-water" d="M 0 78 Q 60 62 120 82 T 280 72 L 280 120 L 0 120 Z"/>
+                        <path class="map-road" d="M 0 40 L 280 34"/>
+                        <path class="map-road" d="M 0 92 L 280 96"/>
+                        <path class="map-road" d="M 60 0 L 56 120"/>
+                        <path class="map-road" d="M 160 0 L 170 120"/>
+                        <path class="map-road-minor" d="M 110 0 L 108 120"/>
+                        <path class="map-road-minor" d="M 220 0 L 226 120"/>
+                        <path class="map-road-minor" d="M 0 66 L 280 60"/>
+                        <path id="s1-route" d="M 18 96 Q 60 30 110 64 T 200 30 Q 240 18 262 56" stroke="#ff4d2e" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="320" stroke-dashoffset="320" />
+                      </svg>
+                      <div class="map-pin" style="left: 12px; bottom: 18px;"></div>
+                      <div class="map-pin" id="s1-pin-end" style="right: 12px; top: 42px; opacity: 0;"></div>
+                    </div>
+                    <div class="ride-stat-strip">
+                      <div class="rss-item"><div class="rss-label">Avg speed</div><div class="rss-val">22.0 km/h</div></div>
+                      <div class="rss-item"><div class="rss-label">Avg HR</div><div class="rss-val">148 bpm</div></div>
+                      <div class="rss-item"><div class="rss-label">Calories</div><div class="rss-val">612 cal</div></div>
+                    </div>
+                    <div class="ride-metrics">
+                      <div class="ride-metric"><div class="rm-val" id="s1-dist">0.0</div><div class="rm-unit">km</div></div>
+                      <div class="ride-metric"><div class="rm-val" id="s1-time">0:00</div><div class="rm-unit">time</div></div>
+                      <div class="ride-metric"><div class="rm-val" id="s1-elev">0</div><div class="rm-unit">m elev</div></div>
+                    </div>
+                    <div class="ride-actions">
+                      <div class="ride-action ride-kudos"><span id="s1-kudos">♥ 0</span></div>
+                      <div class="ride-action">💬 4</div>
+                      <div class="ride-action" style="margin-left: auto;">↗ Share</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="home-ind"></div>
+                <div class="phone-shine"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="caption" id="s1-cap">
+          <span class="kicker">DAILY · 24 KM</span>
+          <span class="title">Outpace yesterday.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== SCENE 2 — Echo music player (2-5s) ====== -->
+    <div class="scene clip" id="s2" style="visibility:hidden;">
+      <div class="grain"></div>
+      <div class="floor"></div>
+      <div class="blob" style="width: 420px; height: 420px; top: -100px; right: -80px; background: #ff89c0;"></div>
+      <div class="blob" style="width: 460px; height: 460px; bottom: -120px; left: -120px; background: #a89bff;"></div>
+      <div class="blob" style="width: 280px; height: 280px; top: 130px; left: 220px; background: #78dcc8;"></div>
+
+      <div class="scene-content">
+        <div class="stage">
+          <!-- LEFT: Notes app -->
+          <div class="phone" id="s2-pL" style="left: 150px; top: 180px; transform: rotateY(24deg) rotateX(4deg) rotateZ(-4deg) translateZ(-90px) scale(1.10);">
+            <div class="phone-shadow"></div>
+            <div class="phone-body">
+              <div class="btn-vol up"></div><div class="btn-vol down"></div><div class="btn-pwr"></div>
+              <div class="phone-screen">
+                <div class="dynamic-island"></div>
+                <div class="status-bar"><span>9:43</span><span class="icons">●●● ◐ ▮</span></div>
+                <div class="notes">
+                  <div class="notes-top"><span class="notes-back">‹ Notes</span><span>⤴ ⋯</span></div>
+                  <div class="note-title">Road trip playlist</div>
+                  <div class="note-meta">Today at 9:42</div>
+                  <div class="note-body">Pulled together for the <span class="hl">Pacific Coast</span> drive next weekend. Synthwave, downtempo, a couple of bangers for the tunnels.</div>
+                  <div class="note-list" id="s2-notelist">
+                    <div class="item done"><div class="check">✓</div><div class="label">Midnight Drive — Synthwave Collective</div></div>
+                    <div class="item done"><div class="check">✓</div><div class="label">Static Coast — Aurora Belt</div></div>
+                    <div class="item" id="s2-item3"><div class="check"></div><div class="label">Glasshouse — Vell</div></div>
+                    <div class="item" id="s2-item4"><div class="check"></div><div class="label">Slow Burn — Indigo Pier</div></div>
+                  </div>
+                </div>
+                <div class="home-ind"></div>
+                <div class="phone-shine"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Visualizer/now-playing companion (replaces Camera asset-heavy view) -->
+          <div class="phone" id="s2-pR" style="right: 135px; top: 170px; transform: rotateY(-26deg) rotateX(4deg) rotateZ(5deg) translateZ(-110px) scale(1.08);">
+            <div class="phone-shadow"></div>
+            <div class="phone-body">
+              <div class="btn-vol up"></div><div class="btn-vol down"></div><div class="btn-pwr"></div>
+              <div class="phone-screen">
+                <div class="dynamic-island"></div>
+                <div class="status-bar"><span>9:43</span><span class="icons">●●● ◐ ▮</span></div>
+                <div class="vis">
+                  <div class="vis-top">
+                    <span>‹ Now Playing</span>
+                    <span class="vis-badge">LOSSLESS · 24 BIT</span>
+                  </div>
+                  <div class="vis-title">Untitled #4</div>
+                  <div class="vis-meta">Anonymous · Echo Sessions</div>
+                  <div class="vis-orb">
+                    <svg viewBox="0 0 280 140">
+                      <defs>
+                        <linearGradient id="orbgrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stop-color="#ff6f9c"/>
+                          <stop offset="50%" stop-color="#b478ff"/>
+                          <stop offset="100%" stop-color="#5bd9ff"/>
+                        </linearGradient>
+                      </defs>
+                      <path id="s2-wave" d="M 0 70 Q 35 30 70 70 T 140 70 T 210 70 T 280 70" stroke="url(#orbgrad)" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.9"/>
+                      <path id="s2-wave2" d="M 0 70 Q 35 110 70 70 T 140 70 T 210 70 T 280 70" stroke="url(#orbgrad)" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.55"/>
+                      <circle id="s2-orb" cx="140" cy="70" r="22" fill="url(#orbgrad)" opacity="0.85"/>
+                    </svg>
+                  </div>
+                  <div class="vis-equalizer" id="s2-eq"></div>
+                  <div class="vis-stats">
+                    <div class="vis-stat"><div class="l">BPM</div><div class="v" id="s2-bpm">0</div></div>
+                    <div class="vis-stat"><div class="l">Plays</div><div class="v" id="s2-plays">0</div></div>
+                    <div class="vis-stat"><div class="l">Tone</div><div class="v">A♭ min</div></div>
+                  </div>
+                </div>
+                <div class="home-ind"></div>
+                <div class="phone-shine"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CENTER: Echo music player -->
+          <div class="phone" id="s2-pC" style="left: 50%; top: 110px; margin-left: -180px; transform: rotateY(6deg) rotateX(2deg) translateZ(40px);">
+            <div class="phone-shadow"></div>
+            <div class="phone-body">
+              <div class="btn-vol up"></div><div class="btn-vol down"></div><div class="btn-pwr"></div>
+              <div class="phone-screen">
+                <div class="dynamic-island"></div>
+                <div class="status-bar"><span>9:43</span><span class="icons">●●● ◐ ▮</span></div>
+                <div class="echo">
+                  <div class="echo-head">
+                    <span>⌄</span>
+                    <div class="echo-head-mid">
+                      <div class="lbl">Playing from album</div>
+                      <div class="play-from">Echo Sessions</div>
+                    </div>
+                    <span>⋯</span>
+                  </div>
+                  <div class="echo-cover" id="s2-album">
+                    <div class="cv-cloud c1"></div>
+                    <div class="cv-cloud c2"></div>
+                    <div class="cv-cloud c3"></div>
+                    <div class="cv-cloud c4"></div>
+                    <div class="cv-title" id="s2-cv-title">Echo</div>
+                    <div class="cv-explicit">E</div>
+                  </div>
+                  <div class="echo-meta">
+                    <div>
+                      <div class="song-title" id="s2-title">Untitled #4</div>
+                      <div class="song-artist" id="s2-artist">Anonymous</div>
+                    </div>
+                    <div class="echo-check" id="s2-check">✓</div>
+                  </div>
+                  <div class="progress-row" id="s2-progrow">
+                    <div class="progress-track">
+                      <div class="progress-fill" id="s2-fill"></div>
+                      <div class="progress-knob" id="s2-knob"></div>
+                    </div>
+                    <div class="progress-times">
+                      <span id="s2-tcur">1:24</span><span>4:12</span>
+                    </div>
+                  </div>
+                  <div class="controls" id="s2-controls">
+                    <span class="ctrl shuffle">⤭</span>
+                    <span class="ctrl">⏮</span>
+                    <div class="play-btn"><svg width="18" height="18" viewBox="0 0 20 20" fill="black"><rect x="4" y="3" width="4" height="14" rx="1"/><rect x="12" y="3" width="4" height="14" rx="1"/></svg></div>
+                    <span class="ctrl">⏭</span>
+                    <span class="ctrl">↻</span>
+                  </div>
+                  <div class="waveform" id="s2-waveform"></div>
+                  <div class="echo-foot">
+                    <span class="device-pill">📱 Your phone</span>
+                    <span>↗ ≡</span>
+                  </div>
+                  <div class="lyrics-card">
+                    <div class="lyr" id="s2-lyric">— neon on the highway —</div>
+                    <div class="lyr-tag">Lyrics ⤢</div>
+                  </div>
+                </div>
+                <div class="home-ind"></div>
+                <div class="phone-shine"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="caption" id="s2-cap">
+          <span class="kicker">SOUNDTRACK · 04:12</span>
+          <span class="title">Score the moment.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="scene-label">
+      Scene 09 · <span class="accent">Phone Mockups</span> · 3D iPhone frames + composed app UI + animated metrics
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      // ============ Scene swap at 2.0s (seek-safe with .set) ============
+      tl.set("#s1", { autoAlpha: 1 }, 0);
+      tl.set("#s2", { autoAlpha: 0 }, 0);
+      tl.set("#s1", { autoAlpha: 0 }, 2.0);
+      tl.set("#s2", { autoAlpha: 1 }, 2.0);
+
+      /* ============ SCENE 1 (0–2s) ============ */
+      tl.from("#s1-pC", { y: 60, scale: 0.92, autoAlpha: 0, duration: 0.55, ease: "power3.out" }, 0.0);
+      tl.from("#s1-pL", { x: -140, autoAlpha: 0, duration: 0.55, ease: "power3.out" }, 0.18);
+      tl.from("#s1-pR", { x: 140, autoAlpha: 0, duration: 0.55, ease: "power3.out" }, 0.22);
+      tl.to("#s1-pC", { keyframes: [{ rotationY: -3, rotationX: 3, y: -6 }, { rotationY: -8, rotationX: 1, y: 0 }], duration: 1.6, ease: "sine.inOut" }, 0.2);
+      tl.to("#s1-pL", { keyframes: [
+        { y: -8, rotationY: "+=2", rotationZ: "+=1.2", duration: 1.0, ease: "sine.inOut" },
+        { y: 4, rotationY: "-=3", rotationZ: "-=2", duration: 1.0, ease: "sine.inOut" }
+      ]}, 0.3);
+      tl.to("#s1-pR", { keyframes: [
+        { y: 10, rotationY: "-=2.5", rotationZ: "+=1.5", duration: 1.1, ease: "sine.inOut" },
+        { y: -4, rotationY: "+=3", rotationZ: "-=2.5", duration: 0.9, ease: "sine.inOut" }
+      ]}, 0.4);
+
+      // Pulse: route draws, pin appears
+      tl.to("#s1-route", { strokeDashoffset: 0, duration: 1.2, ease: "power2.out" }, 0.4);
+      tl.fromTo("#s1-pin-end", { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, 1.55);
+
+      // Activity rings on LEFT phone — sweep in
+      tl.to("#s1-ring-move", { strokeDashoffset: 70.4, duration: 1.0, ease: "power2.out" }, 0.45);    // 80% of 351.86
+      tl.to("#s1-ring-exer", { strokeDashoffset: 80.0, duration: 1.0, ease: "power2.out" }, 0.55);    // ~70%
+      tl.to("#s1-ring-stand", { strokeDashoffset: 35.2, duration: 1.0, ease: "power2.out" }, 0.65);   // ~80%
+
+      // ===== SEEK-SAFE COUNTERS — replace onUpdate with discrete tl.set() at fixed timestamps =====
+      // s1-dist 0.0 -> 24.6 over [0.5, 1.5]s (10 keyframes at 0.1s intervals, power2.out shape)
+      var distSteps = [
+        [0.50, "0.0"], [0.60, "5.9"], [0.70, "10.6"], [0.80, "14.2"], [0.90, "17.1"],
+        [1.00, "19.4"], [1.10, "21.2"], [1.20, "22.7"], [1.30, "23.7"], [1.40, "24.3"], [1.50, "24.6"]
+      ];
+      distSteps.forEach(function (p) { tl.set("#s1-dist", { textContent: p[1] }, p[0]); });
+
+      // s1-time 0 -> 67s ("0:00" -> "1:07")
+      var timeSteps = [
+        [0.50, "0:00"], [0.60, "0:16"], [0.70, "0:29"], [0.80, "0:39"], [0.90, "0:47"],
+        [1.00, "0:53"], [1.10, "0:58"], [1.20, "1:02"], [1.30, "1:04"], [1.40, "1:06"], [1.50, "1:07"]
+      ];
+      timeSteps.forEach(function (p) { tl.set("#s1-time", { textContent: p[1] }, p[0]); });
+
+      // s1-elev 0 -> 184
+      var elevSteps = [
+        [0.50, "0"], [0.60, "44"], [0.70, "79"], [0.80, "106"], [0.90, "128"],
+        [1.00, "145"], [1.10, "159"], [1.20, "169"], [1.30, "177"], [1.40, "182"], [1.50, "184"]
+      ];
+      elevSteps.forEach(function (p) { tl.set("#s1-elev", { textContent: p[1] }, p[0]); });
+
+      // Activity card counters (LEFT phone)
+      var actKmSteps = [
+        [0.55, "0"], [0.65, "4"], [0.75, "9"], [0.85, "14"], [0.95, "18"],
+        [1.05, "21"], [1.15, "23"], [1.25, "24"]
+      ];
+      actKmSteps.forEach(function (p) { tl.set("#s1-act-km", { textContent: p[1] }, p[0]); });
+
+      var actMinSteps = [
+        [0.55, "0m"], [0.65, "12m"], [0.75, "28m"], [0.85, "44m"], [0.95, "58m"],
+        [1.05, "1h 04m"], [1.15, "1h 10m"], [1.25, "1h 12m"]
+      ];
+      actMinSteps.forEach(function (p) { tl.set("#s1-act-min", { textContent: p[1] }, p[0]); });
+
+      // s1-kudos 0 -> 27, [1.2, 1.8]
+      var kudosSteps = [
+        [1.20, "♥ 0"], [1.30, "♥ 9"], [1.40, "♥ 17"], [1.50, "♥ 22"], [1.60, "♥ 25"], [1.70, "♥ 26"], [1.80, "♥ 27"]
+      ];
+      kudosSteps.forEach(function (p) { tl.set("#s1-kudos", { textContent: p[1] }, p[0]); });
+
+      // Calendar: today cell pulses
+      tl.from("#s1-today", { scale: 0.5, autoAlpha: 0, duration: 0.4, ease: "back.out(2)" }, 0.5);
+      tl.to("#s1-today", { scale: 1.08, duration: 0.35, ease: "sine.inOut", yoyo: true, repeat: 1 }, 0.95);
+
+      tl.from("#s1-cap .kicker", { y: 12, autoAlpha: 0, duration: 0.4, ease: "power2.out" }, 0.55);
+      tl.from("#s1-cap .title", { y: 18, autoAlpha: 0, duration: 0.5, ease: "power3.out" }, 0.7);
+
+      /* ============ SCENE 2 (2–5s) ============ */
+      tl.from("#s2-pC", { y: 60, scale: 0.92, autoAlpha: 0, duration: 0.55, ease: "power3.out" }, 2.0);
+      tl.from("#s2-pL", { x: -140, autoAlpha: 0, duration: 0.55, ease: "power3.out" }, 2.18);
+      tl.from("#s2-pR", { x: 140, autoAlpha: 0, duration: 0.55, ease: "power3.out" }, 2.22);
+      tl.to("#s2-pC", { keyframes: [{ rotationY: 4, rotationX: 3, y: -6 }, { rotationY: 10, rotationX: 1, y: 0 }, { rotationY: 6, rotationX: 2, y: -4 }], duration: 2.6, ease: "sine.inOut" }, 2.2);
+      tl.to("#s2-pL", { keyframes: [
+        { y: -10, rotationY: "+=2", rotationZ: "+=1.5", duration: 1.2, ease: "sine.inOut" },
+        { y: 6, rotationY: "-=3.5", rotationZ: "-=2.5", duration: 1.2, ease: "sine.inOut" },
+        { y: -3, rotationY: "+=2", rotationZ: "+=1.2", duration: 0.8, ease: "sine.inOut" }
+      ]}, 2.4);
+      tl.to("#s2-pR", { keyframes: [
+        { y: 8, rotationY: "-=2", rotationZ: "+=1.8", duration: 1.0, ease: "sine.inOut" },
+        { y: -6, rotationY: "+=3", rotationZ: "-=2.5", duration: 1.2, ease: "sine.inOut" },
+        { y: 3, rotationY: "-=2", rotationZ: "+=1.2", duration: 0.9, ease: "sine.inOut" }
+      ]}, 2.5);
+
+      // Echo hero
+      tl.from("#s2-album", { scale: 0.85, autoAlpha: 0, duration: 0.55, ease: "back.out(1.6)" }, 2.15);
+      tl.to("#s2-cv-title", { rotation: -3, duration: 1.4, ease: "sine.inOut", yoyo: true, repeat: 1 }, 2.7);
+      tl.from("#s2-check", { scale: 0, autoAlpha: 0, duration: 0.45, ease: "back.out(2)" }, 2.6);
+      tl.fromTo("#s2-fill", { width: "32%" }, { width: "65%", duration: 2.6, ease: "none" }, 2.3);
+      tl.fromTo("#s2-knob", { left: "32%" }, { left: "65%", duration: 2.6, ease: "none" }, 2.3);
+
+      // s2-tcur 84s -> 164s ("1:24" -> "2:44") — seek-safe discrete steps over [2.3, 4.9]
+      var t2Steps = [
+        [2.30, "1:24"], [2.50, "1:30"], [2.70, "1:36"], [2.90, "1:42"], [3.10, "1:49"],
+        [3.30, "1:55"], [3.50, "2:01"], [3.70, "2:07"], [3.90, "2:13"], [4.10, "2:19"],
+        [4.30, "2:25"], [4.50, "2:32"], [4.70, "2:38"], [4.90, "2:44"]
+      ];
+      t2Steps.forEach(function (p) { tl.set("#s2-tcur", { textContent: p[1] }, p[0]); });
+
+      // Right phone visualizer stat counters
+      var bpmSteps = [
+        [2.30, "0"], [2.50, "42"], [2.70, "78"], [2.90, "104"], [3.10, "118"], [3.30, "124"], [3.50, "126"]
+      ];
+      bpmSteps.forEach(function (p) { tl.set("#s2-bpm", { textContent: p[1] }, p[0]); });
+
+      var playsSteps = [
+        [2.30, "0"], [2.50, "412"], [2.70, "1,108"], [2.90, "1,743"], [3.10, "2,219"],
+        [3.30, "2,538"], [3.50, "2,734"], [3.70, "2,841"]
+      ];
+      playsSteps.forEach(function (p) { tl.set("#s2-plays", { textContent: p[1] }, p[0]); });
+
+      // Lyric swap — use tl.set instead of onComplete for seek-safety
+      tl.to("#s2-lyric", { autoAlpha: 0, y: -10, duration: 0.3, ease: "power2.in" }, 3.6);
+      tl.set("#s2-lyric", { textContent: "— chasing taillight stars —" }, 3.91);
+      tl.to("#s2-lyric", { autoAlpha: 1, y: 0, duration: 0.3, ease: "power2.out" }, 3.95);
+
+      // Notes: 3rd item gets checked
+      tl.to("#s2-item3 .check", { backgroundColor: "#f6c33b", borderColor: "#f6c33b", duration: 0.2 }, 3.2);
+      tl.set("#s2-item3 .check", { textContent: "✓" }, 3.2);
+      tl.to("#s2-item3 .label", { color: "#777", textDecoration: "line-through", duration: 0.2 }, 3.2);
+
+      // Visualizer orb pulse + wave drift (right phone)
+      tl.to("#s2-orb", { keyframes: [
+        { scale: 1.15, duration: 0.6, ease: "sine.inOut" },
+        { scale: 0.95, duration: 0.5, ease: "sine.inOut" },
+        { scale: 1.1, duration: 0.5, ease: "sine.inOut" },
+        { scale: 1.0, duration: 0.4, ease: "sine.inOut" }
+      ], transformOrigin: "50% 50%" }, 2.3);
+      tl.to("#s2-wave", { keyframes: [
+        { attr: { d: "M 0 50 Q 35 90 70 50 T 140 50 T 210 50 T 280 50" }, duration: 0.6 },
+        { attr: { d: "M 0 90 Q 35 30 70 90 T 140 90 T 210 90 T 280 90" }, duration: 0.6 },
+        { attr: { d: "M 0 70 Q 35 30 70 70 T 140 70 T 210 70 T 280 70" }, duration: 0.5 }
+      ], ease: "sine.inOut" }, 2.4);
+
+      // Equalizer bars (deterministic, seeded) for the right phone visualizer
+      (function () {
+        var eq = document.getElementById("s2-eq");
+        if (!eq) return;
+        var n = 22;
+        var seed = 0xC0FFEE;
+        function rand() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+        var bars = [];
+        for (var i = 0; i < n; i++) {
+          var bar = document.createElement("div");
+          bar.className = "eqbar";
+          var c = (i - n / 2) / (n / 2);
+          var envelope = 1 - c * c * 0.4;
+          var h = (0.25 + rand() * 0.7) * envelope;
+          bar.dataset.target = h;
+          bar.style.height = (h * 100) + "%";
+          eq.appendChild(bar);
+          bars.push(bar);
+        }
+        bars.forEach(function (b, i) {
+          var t = parseFloat(b.dataset.target);
+          tl.fromTo(b, { scaleY: 0.1 }, { scaleY: 1, duration: 0.35, ease: "back.out(1.6)" }, 2.35 + i * 0.018);
+          var amp = 0.5 + ((i * 5) % 9) / 18;
+          var dur = 0.28 + (i % 4) * 0.06;
+          tl.to(b, { scaleY: t * amp, duration: dur, ease: "sine.inOut", yoyo: true, repeat: 4 }, 2.85 + (i % 5) * 0.05);
+        });
+      })();
+
+      // Echo waveform (deterministic, seeded) for the center phone
+      (function () {
+        var wf = document.getElementById("s2-waveform");
+        if (!wf) return;
+        var n = 42;
+        var seed = 0xC0FFEE;
+        function rand() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+        var bars = [];
+        for (var i = 0; i < n; i++) {
+          var bar = document.createElement("div");
+          bar.className = "bar";
+          var c = (i - n / 2) / (n / 2);
+          var envelope = 1 - c * c * 0.55;
+          var h = (0.20 + rand() * 0.78) * envelope;
+          bar.dataset.target = h;
+          bar.style.height = (h * 100) + "%";
+          bar.style.opacity = 0.5 + h * 0.5;
+          wf.appendChild(bar);
+          bars.push(bar);
+        }
+        bars.forEach(function (b, i) {
+          var t = parseFloat(b.dataset.target);
+          tl.fromTo(b, { scaleY: 0.05 }, { scaleY: 1, duration: 0.4, ease: "back.out(1.6)" }, 2.45 + i * 0.012);
+          var amp = 0.45 + ((i * 7) % 11) / 22;
+          var dur = 0.30 + (i % 5) * 0.07;
+          tl.to(b, { scaleY: t * amp, duration: dur, ease: "sine.inOut", yoyo: true, repeat: 3 }, 2.95 + (i % 6) * 0.06);
+        });
+      })();
+
+      tl.from("#s2-cap .kicker", { y: 12, autoAlpha: 0, duration: 0.4, ease: "power2.out" }, 2.55);
+      tl.from("#s2-cap .title", { y: 18, autoAlpha: 0, duration: 0.5, ease: "power3.out" }, 2.7);
+
+      window.__timelines["scene-09-phone-mockups"] = tl;
+    })();
+  </script>
+</body>
+</html>

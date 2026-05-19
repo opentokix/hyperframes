@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>scene-01-radial-bloom-grid</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; }
+
+    [data-composition-id="scene-01-radial-bloom-grid"] {
+      width: 1920px; height: 1080px;
+      position: relative; overflow: hidden;
+      background: #0e100f;
+    }
+    [data-composition-id="scene-01-radial-bloom-grid"] .gsap-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 50%, #161816 0%, #0e100f 100%);
+    }
+
+    [data-composition-id="scene-01-radial-bloom-grid"] .gsap-grid {
+      position: absolute;
+      top: 50%; left: 50%;
+      display: flex;
+      flex-direction: column;
+    }
+    [data-composition-id="scene-01-radial-bloom-grid"] .g-row {
+      display: flex;
+    }
+    [data-composition-id="scene-01-radial-bloom-grid"] .g-cell {
+      width: 40px; height: 40px;
+      margin: 8px;
+      background: #fffce1;
+      border-radius: 50%;
+      will-change: transform, opacity;
+    }
+
+    .scene-label {
+      position: absolute; left: 48px; bottom: 48px;
+      font-size: 16px; color: #707070;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      font-weight: 500; z-index: 100;
+      font-family: "Inter", sans-serif;
+    }
+    .scene-label .accent { color: #f5f5f5; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div id="scene-01-radial-bloom-grid"
+       data-composition-id="scene-01-radial-bloom-grid"
+       data-start="0"
+       data-duration="3"
+       data-width="1920"
+       data-height="1080"
+       style="width:1920px; height:1080px;">
+
+    <div class="gsap-bg"></div>
+
+    <!-- Dot grid — generated via JS -->
+    <div class="gsap-grid" id="gsap-grid"></div>
+
+    <div class="scene-label">Scene 01 &middot; <span class="accent">Radial Bloom Grid</span> &middot; 15&times;25 dot grid with stagger from center</div>
+  </div>
+
+  <script>
+    (function () {
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+      var root = document.querySelector('[data-composition-id="scene-01-radial-bloom-grid"]');
+      var grid = root.querySelector("#gsap-grid");
+
+      var ROWS = 15;
+      var COLS = 25;
+      var CELL_SIZE = 40;
+      var GAP = 16; // 8px margin each side
+      var PITCH = CELL_SIZE + GAP;
+      var DUR = 3;
+
+      // Grid dimensions for centering
+      var gridW = COLS * PITCH;
+      var gridH = ROWS * PITCH;
+      gsap.set(grid, { marginLeft: -gridW / 2, marginTop: -gridH / 2 });
+
+      // Build grid
+      var cells = [];
+      var cellEls = [];
+      for (var r = 0; r < ROWS; r++) {
+        var rowDiv = document.createElement("div");
+        rowDiv.className = "g-row";
+        for (var c = 0; c < COLS; c++) {
+          var cell = document.createElement("div");
+          cell.className = "g-cell";
+          rowDiv.appendChild(cell);
+          cellEls.push(cell);
+          cells.push({ r: r, c: c, el: cell });
+        }
+        grid.appendChild(rowDiv);
+      }
+
+      // Center of grid (in grid-cell coordinates)
+      var centerR = (ROWS - 1) / 2;
+      var centerC = (COLS - 1) / 2;
+
+      // Pre-compute distance from center for each cell (for stagger)
+      cells.forEach(function (cell) {
+        var dr = cell.r - centerR;
+        var dc = cell.c - centerC;
+        cell.dist = Math.sqrt(dr * dr + dc * dc);
+        // Angle from center (for explosion direction)
+        cell.angle = Math.atan2(dr, dc);
+      });
+
+      var maxDist = Math.sqrt(centerR * centerR + centerC * centerC);
+
+      // Start hidden — radial bloom reveals cells from center outward
+      gsap.set(cellEls, { opacity: 0, scale: 0.3 });
+
+      // === Phase 1: Radial bloom in (0 → 1.6s) ===
+      // Cells light up in concentric rings from the center outward.
+      // Stagger delay is proportional to distance from center, so
+      // an early frame shows only the center dot lit; later frames
+      // show progressively larger rings until the whole grid blooms.
+      var BLOOM_END = 1.6;
+      cells.forEach(function (cell) {
+        var normDist = cell.dist / maxDist;
+        var bloomDelay = normDist * 1.1; // rings reach outer edge by ~1.1s
+        tl.to(cell.el, {
+          opacity: 1,
+          scale: 1,
+          duration: 0.45,
+          ease: "back.out(2)"
+        }, bloomDelay);
+      });
+
+      // === Phase 2: Cursor sweep ripple (1.6 → 2.4s) ===
+      // After full bloom, a cursor sweeps left→right with elastic
+      // snap-back rippling across the grid — original flex-gsap motif.
+      for (var c = 0; c < COLS; c++) {
+        var colCells = cells.filter(function (cell) { return cell.c === c; });
+        var colEls = colCells.map(function (cell) { return cell.el; });
+        var colStart = BLOOM_END + c * 0.022;
+
+        // Pull toward cursor path
+        tl.to(colEls, {
+          y: -22,
+          x: 8,
+          duration: 0.08,
+          ease: "power2.out",
+          stagger: 0.004
+        }, colStart);
+
+        // Snap back with elastic
+        tl.to(colEls, {
+          y: 0,
+          x: 0,
+          duration: 0.28,
+          ease: "elastic.out(1, 0.3)",
+          stagger: 0.004
+        }, colStart + 0.08);
+      }
+
+      // === Phase 3: Explosion → blur exit (2.55 → 3s) ===
+      // Dots fly outward from center — sells the transition out.
+      var EXPLODE_START = 2.55;
+      cells.forEach(function (cell) {
+        var normDist = cell.dist / maxDist;
+        var flyDist = 160 * (1 - normDist * 0.5);
+        var flyX = Math.cos(cell.angle) * flyDist;
+        var flyY = Math.sin(cell.angle) * flyDist - 100;
+        var staggerDelay = normDist * 0.08;
+
+        tl.to(cell.el, {
+          x: flyX,
+          y: flyY,
+          scale: 0.3,
+          opacity: 0.2,
+          duration: 0.30,
+          ease: "power3.out"
+        }, EXPLODE_START + staggerDelay);
+      });
+
+      // Blur ramp on entire grid — sells the transition
+      tl.to(grid, {
+        filter: "blur(20px)",
+        duration: 0.30,
+        ease: "power2.in"
+      }, EXPLODE_START + 0.05);
+
+      // Pad timeline to master slot duration
+      tl.to({}, { duration: DUR }, 0);
+
+      window.__timelines["scene-01-radial-bloom-grid"] = tl;
+    })();
+  </script>
+</body>
+</html>
