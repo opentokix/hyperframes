@@ -122,18 +122,46 @@ With the extracted tokens, follow [design-showcase.md](design-showcase.md):
 
 **Critical:** Use the extracted values verbatim. Don't round `cornerRadius: 12.0` to `12px` and then decide "that's close to 16px." The Figma API gives exact values — use them.
 
-### Step 6: Build the slides
+### Step 6: Export components as SVG
 
-The slides in `summary.html` should use the Figma component vocabulary:
+The Figma REST API exports any node as a lossless SVG:
 
-- Button styles from the Buttons page (exact radius, padding, fill, stroke)
-- Card patterns from the Components page
-- Color swatches from the Colors page
-- Typography specimens at video scale
+```bash
+curl -s -H "X-Figma-Token: $TOKEN" \
+  "https://api.figma.com/v1/images/$FILE_KEY?ids=$NODE_ID1,$NODE_ID2&format=svg"
+```
 
-**Via MCP (if available):** Call `get_design_context` on individual component nodes to get full HTML/CSS output. Adapt to vanilla HTML, keeping the exact CSS properties.
+Returns `{ "images": { "node:id": "https://...s3.amazonaws.com/..." } }`. Download each URL — the SVG contains exact shapes, colors, text-as-paths, strokes. Truly lossless vector exports.
 
-**Via REST API:** Use the extracted properties to build the CSS by hand from the node data.
+**What to export:**
+
+- Default-state buttons (primary, secondary, outline, dark)
+- Tags/badges/pills
+- Section tags and dividers
+- Logo/brand mark
+- Icons (if vector)
+- Illustrations (if vector)
+
+### Step 7: Build slides as component references
+
+The slides in `summary.html` are **component references for the composition agent**. Each slide shows actual Figma components at 1920×1080 scale. The agent copies the slide's HTML/SVG structure and swaps content — no guessing.
+
+**Inline the exported SVGs** directly in the slide HTML. The agent reads the SVG source to extract exact CSS values or uses the SVG as-is.
+
+| Slide | Shows                                              | Source                          |
+| ----- | -------------------------------------------------- | ------------------------------- |
+| 1     | All button variants at video scale                 | Inline SVGs from Step 6         |
+| 2     | Card components with exact padding, radius, border | CSS from Step 4 node properties |
+| 3     | Tags, badges, pills                                | Inline SVGs from Step 6         |
+| 4     | A real layout composition from the Figma           | CSS grid from Step 4            |
+| 5     | Typography in a composed layout (not a specimen)   | Fonts from Step 3               |
+| 6     | Illustrations, icons, logo as inline SVG           | SVG exports from Step 6         |
+
+**The slides ARE the component spec.** The agent doesn't guess what a card looks like — it copies the slide's structure.
+
+**Via MCP (if available):** Call `get_design_context` on individual component nodes for full HTML/CSS. Adapt to vanilla HTML.
+
+**Via REST API:** Export as SVG for lossless vector components. Use node properties for CSS values.
 
 ## REST API reference
 
