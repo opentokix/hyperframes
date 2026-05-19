@@ -21,9 +21,9 @@ If `design.md` doesn't exist yet, run Step 1 (Design system) first. Expansion wi
 
 Even a detailed 7-scene brief lacks things only the expansion adds:
 
-- **Atmosphere layers per scene** (required 2–5 from house-style: radial glows, ghost type, hairline rules, grain, thematic decoratives) — the user's prompt almost never lists these; expansion adds them.
-- **Secondary motion for every decorative** — breath, drift, pulse, orbit. A decorative without ambient motion feels dead.
-- **Micro-details that make a scene feel real** — registration marks, tick indicators, monospace coord labels, typographic accents, code snippets in the background, grid patterns. Things the user didn't think to request.
+- **Atmosphere where the scene earns it** — a radial glow, ghost text, or grain texture can add depth. But a scene built around one powerful element doesn't need decoration. Add atmosphere to serve the mood, not to fill emptiness.
+- **Motion that serves pacing** — ambient motion keeps scenes alive during the breathe phase. But stillness is also a tool. Not every element needs to move.
+- **Micro-details sparingly** — registration marks, monospace labels, structural rules. These earn their place in data-dense or technical scenes. In a contemplative scene, they're clutter.
 - **Transition choreography at the object level** — not "crossfade" but "X expands outward and becomes Y". Specific duration, ease, and morph source/target.
 - **Pacing beats within each scene** — where tension builds, where a hold lets the viewer breathe, where the accent word lands.
 - **Exact hex values, typography parameters, ease choices** from design.md — no vagueness left for the scene subagent to guess.
@@ -47,7 +47,7 @@ Expand into a full production prompt with these sections:
 4. **Per-scene beats** — for each scene, use the beat-direction format:
    - **Concept** — the big idea in 2-3 sentences. What visual WORLD? What metaphor? What should the viewer FEEL?
    - **Mood direction** — cultural/design references, not hex codes. ("Bauhaus color studies", "cinematic title sequence", "editorial calm")
-   - **Depth layers** — BG (2-5 decoratives with ambient motion), MG (content), FG (accents, structural elements, micro-details). 8-10 total elements per scene per video-composition.md.
+   - **Depth layers** — BG (atmosphere), MG (content), FG (accents). Density matches the beat — a SLAM might have one element; a proof scene might have a data grid. Don't pad sparse scenes with decoratives just to hit a count.
    - **Animation choreography** — specific verbs per element. High: SLAMS, CRASHES. Medium: CASCADE, SLIDES. Low: floats, types on, counts up. Every element gets a verb. If you can't name the verb, the element is not yet designed.
    - **Transition out** — shader or CSS, with specific type and parameters. Not "crossfade" but "blur crossfade, 0.4s, power2.inOut."
 

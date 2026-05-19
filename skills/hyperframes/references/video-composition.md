@@ -12,15 +12,15 @@ design.md defines what the brand looks like: colors, fonts, personality, constra
 
 ## Density
 
-A beat with 3 elements looks empty. A beat with 8-10 feels alive.
+Density is a creative choice, not a minimum. A single number filling the frame can be more powerful than 10 elements competing for attention. An empty frame with one element appearing creates tension a busy frame can't.
 
-Every scene needs:
+Think in layers, not counts:
 
-- **Background texture** — radial glow, oversized ghost type, color panel, grain, grid. Never solid flat color.
-- **Midground content** — the actual message. Cards, stats, code blocks, images.
-- **Foreground accents** — dividers, labels, data bars, registration marks, monospace metadata. The details that make it feel produced, not generated.
+- **Background** — texture, color, atmosphere. Can be a solid color if that serves the scene.
+- **Content** — the actual message. Could be one word or a data table.
+- **Accents** — structural elements that guide the eye. Optional — not every scene needs them.
 
-Aim for 8-10 visual elements per scene. Two of those should be decorative elements the user didn't ask for — you add them because empty frames look broken.
+The default failure mode is too sparse (flat background, centered text, no depth). But the overcorrection — cramming decoratives into every frame — is equally bad. Match density to the scene's emotional beat: high-energy scenes earn more elements; contemplative moments earn fewer.
 
 ## Color Presence
 
@@ -49,14 +49,14 @@ If you're writing a font-size under 24px in a video composition, justify it. If 
 
 Subtle reads as static at 30fps. Err toward more movement than feels safe.
 
-- Every decorative element should have ambient motion: breathe, drift, pulse, orbit. Static decoratives feel dead.
+- Decorative elements usually need ambient motion: breathe, drift, pulse, orbit. But deliberate stillness after motion is powerful — don't animate something just because it exists.
 - Vary motion per scene — don't repeat the same ambient pattern.
 - Scene entrances should use 3+ different eases and directions. If every element enters from `y: 30, opacity: 0`, the scene has no choreography.
 
 ## Frame Composition
 
-- **Two focal points minimum.** The eye needs somewhere to travel.
-- **Fill the frame.** Hero text: 60-80% of frame width.
+- **Focal hierarchy.** The eye needs to know where to land first. Sometimes that's two competing elements; sometimes it's one dominating element with nothing else. Both work — what doesn't work is everything at equal weight.
+- **Use the frame.** Content can fill 80% of the width or occupy one corner — both are valid compositions. What looks broken is content floating in the center with equal margins on all sides, the default web layout.
 - **Anchor to edges.** Pin content to left/top or right/bottom. Centered-and-floating is a web layout pattern.
 - **Split frames.** Data panel left, content right. Top bar with metadata, full-width below. Zone-based layouts over centered stacks.
 - **Structural elements.** Rules, dividers, border panels. They create visual paths and animate well (`scaleX: 0` → `1`).

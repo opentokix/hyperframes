@@ -9,32 +9,68 @@ HTML is the source of truth for video. A composition is an HTML file with `data-
 
 ## Approach
 
-### Discovery (exploratory requests only)
+### Brief (exploratory requests only)
 
-For open-ended requests ("make me a product launch video", "create something for our brand") where the user hasn't committed to a direction, understand intent before picking colors:
+For open-ended requests ("make me a product launch video", "create something for our brand"), gather what's missing from the prompt before building a design system. For specific requests ("add a title card", "fix the timing on scene 3"), skip this.
 
-- **Audience** — who watches this? Developers? Executives? General consumers?
-- **Platform** — where does it play? Social (15s), website hero, product demo, internal?
-- **Priority** — what matters most? Motion quality? Content accuracy? Brand fidelity? Speed?
-- **Variations** — does the user want options, or a single best shot?
+Extract what you can from the prompt itself — only ask about what's genuinely missing. Ask **one question at a time** and let each answer inform the next. Combine two questions in one message when they're naturally related, but never dump a list.
 
-For specific requests ("add a title card", "fix the timing on scene 3"), skip discovery.
+**Format each question as a lettered multiple choice** (A, B, C, D) so the user can respond with just a letter. Include 2-4 contextual options plus the option to give a custom answer. Tailor the options to the specific prompt — don't use generic choices.
 
-For exploratory requests, consider offering 2-3 variations that differ meaningfully — not just color swaps, but different pacing, energy levels, or structural approaches. One safe/expected, one ambitious. Don't mandate this — it's a tool available when appropriate.
+The questions (in rough priority order):
+
+- **Audience** — who watches this? (Developers, executives, consumers — changes type scale, density, easing)
+- **Emotion** — what should the viewer feel? (Maps directly to mood board clustering in the picker. Sharpen this based on the audience answer — "technical precision or breakthrough excitement?" is better than "what mood?")
+- **Brand assets** — do they have a logo, existing colors, fonts, website? (If yes, palettes and type pairings derive from them. If no, skip — full creative freedom.)
+- **Light or dark?** (Eliminates half the palette options. Can often combine with another question.)
+- **Surface** — where does this play? (Social → portrait/punchy, website hero → landscape/looping, presentation → widescreen/breathable, internal → information-dense)
+- **Key takeaway** — what's the one thing the viewer should remember? (Drives focal hierarchy in architecture previews)
+
+Most prompts already answer 2-3 of these — a typical brief is 2-3 questions, not 6. These answers seed the design picker in Step 1 — pass them when generating mood boards, palettes, and architectures.
 
 ### Step 1: Design system
 
-If `design.md` or `DESIGN.md` exists in the project, read it first (check both casings — they're different files on Linux). It's the source of truth for brand colors, fonts, and constraints. Use its exact values — don't invent colors or substitute fonts. Any format works (YAML frontmatter, prose, tables — just extract the values).
+**Always check for DESIGN.html first.** At the start of any composition task, look for `DESIGN.html` in the project root. This is the primary design system format — a self-contained HTML document with rendered sections for palette, typography, surface, motion, background shader, guidelines, and template slide gallery.
 
-If it names fonts you can't find locally (no `fonts/` directory with `.woff2` files, not a built-in font), warn the user before writing HTML: "design.md specifies [font name] but no font files found. Please add .woff2 files to `fonts/` or I'll fall back to [closest built-in alternative]."
+**Check in this order:**
 
-If no `design.md` exists, offer the user a choice:
+1. **`DESIGN.html` exists** → Read it using the guide at [references/design-html.md](references/design-html.md). The guide covers both token extraction AND template extraction (the page has TWO design systems — build from the templates, not the page chrome). If a shader background exists, port it using the GSAP-proxy pattern in the guide. Proceed to Step 2.
 
-1. **User named a style or mood?** → Read [visual-styles.md](./visual-styles.md) for the 8 named presets. Pick the closest match.
-2. **Want to browse options visually?** → Run the design picker: read [references/design-picker.md](references/design-picker.md) for the full workflow. This serves a visual picker page. The user configures mood, palette, typography, and motion in the browser, then copies the generated design.md and pastes it back into the conversation.
-3. **Want to skip and go fast?** → Ask: mood, light or dark, any brand colors/fonts? Then pick a palette from [house-style.md](./house-style.md).
+2. **No `DESIGN.html`, but `design.md` or `DESIGN.md` exists** → Generate a bespoke DESIGN.html:
 
-**design.md defines the brand. It does not define video composition rules.** Those come from [references/video-composition.md](references/video-composition.md) and [house-style.md](./house-style.md). Use brand colors at video-appropriate scale — not at web-UI opacity.
+   Read [references/design-showcase.md](references/design-showcase.md) for the full generation process. This is NOT a template fill — the agent must craft a page that embodies the brand's visual personality. An HP design.md produces angular chevrons and sharp 4px buttons. A Meta design.md produces pill-shaped elements and photography-first 32px-radius cards. Same sections, completely different visual treatment.
+
+   The generation process:
+   1. Extract palette, typography, motion, surface tokens from the design.md
+   2. Place the system on character axes (rounded vs sharp, flat vs elevated, photo-first vs type-first, warm vs clinical)
+   3. Write each section (cover, palette, type, surface, motion, background, guidelines, templates) styled to the brand's character
+   4. The cover/hero section must have a signature decorative gesture derived from the brand (not generic)
+   5. Save as `DESIGN.html` in the project root
+
+   Then offer the picker for fine-tuning: read [references/design-picker.md](references/design-picker.md) to serve the visual picker with the generated DESIGN.html pre-loaded. The user can adjust palette, typography, corners, density, depth, and shader background. The picker loads the DESIGN.html in its iframe preview.
+
+   If the user declines both generation and picker → extract palette, font, and constraint values directly from the markdown. Proceed to Step 2.
+
+3. **User provides a Figma URL** → Read [references/figma-to-design-html.md](references/figma-to-design-html.md) for the lossless extraction process. Pull colors, typography, and component properties directly from the Figma API. Craft a bespoke DESIGN.html using exact Figma values — no approximation. Then offer the picker for fine-tuning.
+
+4. **Neither exists and no Figma URL** → Prompt the user:
+
+   > "No design file found. Would you like to:
+   > **A) Browse templates visually** — Open a template picker in your browser. Choose from 34 visual directions, then configure palette, typography, corners, motion, and shader background. Exports a DESIGN.html ready for video composition.
+   > **B) Describe a style** — Tell me the mood, energy, or a style reference (e.g. "dark editorial", "warm minimal", "brutalist"). I'll match it to one of 8 named presets.
+   > **C) Skip design, go fast** — Jump straight to building. I'll ask 2-3 quick questions and pick a palette."
+   - **A) Template picker** → Read [references/design-picker.md](references/design-picker.md) for the full workflow.
+   - **B) Style or mood** → Read [visual-styles.md](./visual-styles.md) for the 8 named presets. Pick the closest match.
+   - **C) Fast path** → Ask: mood, light or dark, any brand colors/fonts? Then pick a palette from [house-style.md](./house-style.md).
+
+**Font resolution:** When a design file names a font, resolve it in this order:
+
+1. Check `fonts/` directory for `.woff2` files matching the family name → use `@font-face` with local files
+2. Check if the font is on Google Fonts (IBM Plex Sans, Inter, etc.) → use `<link>` tag directly
+3. Check the design.md's "Font Substitutes" section → use the first recommended substitute
+4. If none found, warn: "The design specifies [font name] but no font files found. Add .woff2 files to `fonts/` or I'll fall back to [closest built-in alternative]."
+
+**The design file defines the brand. It does not define video composition rules.** Those come from [references/video-composition.md](references/video-composition.md) and [house-style.md](./house-style.md). Use brand colors at video-appropriate scale — not at web-UI opacity.
 
 ### Step 2: Prompt expansion
 
@@ -476,6 +512,7 @@ Skip on small edits (fixing a color, adjusting one duration). Run on new composi
 - **[references/techniques.md](references/techniques.md)** — 11 visual techniques with code patterns: SVG drawing, Canvas 2D, CSS 3D, kinetic type, Lottie, video compositing, typing effect, variable fonts, MotionPath, velocity transitions, audio-reactive. Read when planning techniques per beat.
 - **[references/narration.md](references/narration.md)** — Pacing, tone, script structure, number pronunciation, opening line patterns. Read when the composition includes voiceover or TTS.
 - **[references/design-picker.md](references/design-picker.md)** — Create a design.md via visual picker. Read when no design.md exists and the user wants to create one.
+- **[references/shader-backgrounds.md](references/shader-backgrounds.md)** — GLSL shader patterns for contextual scene backgrounds. Noise library, domain warping, pattern recipes by context (travel, medical, tech, industrial). Read when building shader backgrounds for compositions or the design picker.
 - **[visual-styles.md](visual-styles.md)** — 8 named visual styles with hex palettes, GSAP easing signatures, and shader pairings. Read when user names a style or when generating design.md.
 - **[house-style.md](house-style.md)** — Default motion, sizing, and color palettes when no design.md is specified.
 - **[patterns.md](patterns.md)** — PiP, title cards, slide show patterns.

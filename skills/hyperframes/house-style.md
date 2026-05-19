@@ -32,9 +32,9 @@ If the content genuinely calls for one of these — centered layout for a solemn
 
 ## Background Layer
 
-Every scene needs visual depth — persistent decorative elements that stay visible while content animates in. Without these, scenes feel empty during entrance staggering.
+Decoratives add depth when a scene needs it — during entrance staggering, during holds, or when the content is sparse and the frame feels flat. They're a tool, not a requirement.
 
-Ideas (mix and match, 2-5 per scene):
+Ideas:
 
 - Radial glows (accent-tinted, low opacity, breathing scale)
 - Ghost text (theme words at 3-8% opacity, very large, slow drift)
@@ -42,9 +42,7 @@ Ideas (mix and match, 2-5 per scene):
 - Grain/noise overlay, geometric shapes, grid patterns
 - Thematic decoratives (orbit rings for space, vinyl grooves for music, grid lines for data)
 
-All decoratives should have slow ambient GSAP animation — breathing, drift, pulse. Static decoratives feel dead.
-
-**Decorative count vs motion count.** The "2-5 per scene" count refers to decorative _elements_. If a project's `design.md` says "single ambient motion per scene", it means one looping motion applied to these decoratives (a shared breath/drift/pulse) — not one element total. A scene with 4 decoratives sharing one breathing motion is correct; a scene with 1 decorative is under-dressed.
+Use as many or as few as the scene earns. A data-dense scene with 4 decoratives and shared breathing motion is rich. A single word on a black frame with no decoration is powerful. Both are valid — the question is whether the density matches the emotional beat.
 
 ## Motion
 
