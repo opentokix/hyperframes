@@ -104,6 +104,7 @@ Need a specific technique? Use this table to find the canonical scene.
 | **Customer testimonial card** (Fraunces italic quote + avatar + author + company logo + 5-star cascade) | [`04-composed-ui/scene-15-testimonial-card/`](04-composed-ui/scene-15-testimonial-card/) |
 | **Notification stack** (4 shadcn-style toast notifications: success / info / warning / error with auto-dismiss) | [`04-composed-ui/scene-16-notification-stack/`](04-composed-ui/scene-16-notification-stack/) |
 | **Loading states showcase** (skeleton / spinner / progress bar / dots / circular / pulse — 6 patterns side-by-side) | [`04-composed-ui/scene-17-loading-states/`](04-composed-ui/scene-17-loading-states/) |
+| **Settings panel** (toggle + radio + dropdown + slider + color swatches all animating in a Render Preferences modal) | [`04-composed-ui/scene-18-settings-panel/`](04-composed-ui/scene-18-settings-panel/) |
 | WebGL fragment shader + Canvas 2D fallback | [`07-html-in-canvas/scene-01-webgl-shader/`](07-html-in-canvas/scene-01-webgl-shader/) |
 | Canvas 2D procedural ASCII art + lightning | [`07-html-in-canvas/scene-02-canvas-ascii/`](07-html-in-canvas/scene-02-canvas-ascii/) |
 | Canvas 2D cursor blur + chromatic aberration text | [`07-html-in-canvas/scene-03-cursor-blur-sweeps/`](07-html-in-canvas/scene-03-cursor-blur-sweeps/) |
@@ -117,6 +118,7 @@ Need a specific technique? Use this table to find the canonical scene.
 | Canonical 0 → 1,000,000 counter (33 deterministic `tl.set` steps) | [`09-counters-and-data/scene-03-counter-million-showcase/`](09-counters-and-data/scene-03-counter-million-showcase/) |
 | **6-bar staggered chart rise with deterministic value labels** (quarterly growth, peak bar in amber) | [`09-counters-and-data/scene-04-bar-chart-rise/`](09-counters-and-data/scene-04-bar-chart-rise/) |
 | **4-card sparkline dashboard** (SVG path-draw + filled area + delta arrows + live value counters) | [`09-counters-and-data/scene-05-sparkline-draw/`](09-counters-and-data/scene-05-sparkline-draw/) |
+| **4-segment donut chart reveal** (SVG stroke-dashoffset segments + center percentage counter + legend cascade) | [`09-counters-and-data/scene-06-donut-chart-reveal/`](09-counters-and-data/scene-06-donut-chart-reveal/) |
 | Radial bloom dot grid (stagger from center) | [`10-particles-and-ambient/scene-01-radial-bloom-grid/`](10-particles-and-ambient/scene-01-radial-bloom-grid/) |
 | Aurora end-card + particles + tri-color text gradient | [`10-particles-and-ambient/scene-02-aurora-end-card/`](10-particles-and-ambient/scene-02-aurora-end-card/) |
 | Scan-line CRT grid + telemetry HUD | [`10-particles-and-ambient/scene-03-scan-line-grid/`](10-particles-and-ambient/scene-03-scan-line-grid/) |
@@ -149,10 +151,10 @@ Need a specific technique? Use this table to find the canonical scene.
 
 ## Stitched Grand Tour reel
 
-All 79 scenes concatenated back-to-back as a single 9:07 MP4. Useful for visual-gestalt review or for sharing the library at a glance:
+All 81 scenes concatenated back-to-back as a single 9:22 MP4. Useful for visual-gestalt review or for sharing the library at a glance:
 
-- **Grand Tour reel:** https://www.heygenverse.com/s/12548e7f-205c-4144-a2be-4423c2ccc16c/raw
-- **Browsable gallery (per-section grid, all 79 scenes as embedded videos):** https://www.heygenverse.com/a/1636f2fe-3ddc-4543-9a56-0d0b99538807
+- **Grand Tour reel:** https://www.heygenverse.com/s/23b285ce-a09a-487a-94d7-53f0c2827f2d/raw
+- **Browsable gallery (per-section grid, all 81 scenes as embedded videos):** https://www.heygenverse.com/a/1636f2fe-3ddc-4543-9a56-0d0b99538807
 
 Rebuild the reel after adding scenes: `ffmpeg -f concat -safe 0 -i /tmp/concat-list.txt -c copy out.mp4` where the concat list orders all scene MP4s in section sequence.
 

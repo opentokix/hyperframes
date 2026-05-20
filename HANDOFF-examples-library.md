@@ -1,17 +1,17 @@
 # HANDOFF — Examples Library (Sessions May 19, 2026)
 
-> **READ THIS BEFORE PICKING UP THE EXAMPLES LIBRARY WORK.** This is the followup to `HANDOFF.md`. This doc covers what was built May 19: the HyperFrames Capability Showcase example library, **79 scenes across 13 sections**, all rendered and uploaded, gallery app live, skill wiring updated to 3-mode framework, second-pass production-project survey (batch 10), plus six rounds of hand-authored gap-fillers (batches 11-16).
+> **READ THIS BEFORE PICKING UP THE EXAMPLES LIBRARY WORK.** This is the followup to `HANDOFF.md`. This doc covers what was built May 19: the HyperFrames Capability Showcase example library, **81 scenes across 13 sections**, all rendered and uploaded, gallery app live, skill wiring updated to 3-mode framework, second-pass production-project survey (batch 10), plus seven rounds of hand-authored gap-fillers (batches 11-17).
 
 ---
 
 ## TL;DR
 
-**What got built:** **79 production-grade example scenes** at `skills/website-to-hyperframes/examples/`, covering every HyperFrames technique. Each scene is standalone-renderable, lint-clean, snapshot-verified, composed 100% from HTML/CSS/SVG/GSAP/Canvas — zero captured screenshots. Plus a single concatenated "Grand Tour" reel (**9:07 MP4**) that plays all 79 back-to-back.
+**What got built:** **81 production-grade example scenes** at `skills/website-to-hyperframes/examples/`, covering every HyperFrames technique. Each scene is standalone-renderable, lint-clean, snapshot-verified, composed 100% from HTML/CSS/SVG/GSAP/Canvas — zero captured screenshots. Plus a single concatenated "Grand Tour" reel (**9:22 MP4**) that plays all 81 back-to-back.
 
 **Why:** `HANDOFF.md` Recommendation 1 said skill prose was exhausted as a lever (11 eval branches all produced slideshow videos regardless of prose changes). Recommendation 2 said: **show, don't tell** — build production-grade reference examples agents can use. This library is that.
 
 **Gallery is live:** https://www.heygenverse.com/a/1636f2fe-3ddc-4543-9a56-0d0b99538807
-**Grand Tour reel (all 79 scenes, 9:07):** https://www.heygenverse.com/s/12548e7f-205c-4144-a2be-4423c2ccc16c/raw
+**Grand Tour reel (all 81 scenes, 9:22):** https://www.heygenverse.com/s/23b285ce-a09a-487a-94d7-53f0c2827f2d/raw
 
 **Skill wiring is active AND updated** (May 19 evening): the skill now explicitly names **three legitimate modes** for using examples — `copy+mutate` (1:1 fit), `recombine` (2-3 scenes layered), `fresh` (author from scratch with examples as taste reference). Examples are NEVER finished beats — non-negotiable customization rule applies in every mode. See **[Skill Wiring](#skill-wiring)** below for the patch summary.
 
@@ -20,9 +20,14 @@
 - **step-5-build.md**: mode-aware build process; explicit "fresh ≠ paste, recombine ≠ frankenstein".
 - **beat-builder-guide.md**: 3-mode table is the FIRST mandatory read; "non-negotiable in every mode: customize."
 
-**Branch:** `feat/pipeline-quality-v2` (continued from prior session). **23 commits** total this session.
+**Branch:** `feat/pipeline-quality-v2` (continued from prior session). **24 commits** total this session.
 
-**Library is internally consistent.** Every scene appears in (a) its section README, (b) the master lookup table in `examples/README.md`, (c) the rendered MP4 list, and (d) the Verse asset ID table below. The technique-pick checklist in step-3 has reliable coverage — an agent can find any of the 79 scenes from the lookup table without grepping the directory.
+**Library is internally consistent.** Every scene appears in (a) its section README, (b) the master lookup table in `examples/README.md`, (c) the rendered MP4 list, and (d) the Verse asset ID table below. The technique-pick checklist in step-3 has reliable coverage — an agent can find any of the 81 scenes from the lookup table without grepping the directory.
+
+### What batch 17 added (2 more scenes)
+
+- **09-06 Donut Chart Reveal**: 4-segment SVG donut (Product launch 42% blue, Social ads 28% green, Demo 18% amber, Brand reels 12% pink) drawn sequentially via stroke-dashoffset. Each segment fades in (CSS opacity:0 → opacity:1 via tl.to) then draws via dashoffset (fully seekable). Center percentage counter ticks 0→100% via tl.set(). Legend cards on the right cascade in synced with each segment's draw.
+- **04-18 Settings Panel**: Render Preferences modal with 5 interactive controls in sequence — toggle switch (Auto-render off→on), radio group (Render quality Standard→High), dropdown (Output format cycles MP4·H.264 → MOV·ProRes → WebM·VP9 → MP4·H.265), slider with synced counter (Frame rate 0→60 FPS), color swatches (Accent color blue→amber with scale pulse). Save button pulses + turns green with "✓ Saved" at the end.
 
 ### What batch 16 added (2 more composed-UI patterns)
 
@@ -122,12 +127,12 @@ skills/website-to-hyperframes/examples/
 ├── 01-typography/              README.md + 11 scene dirs (~100K total)
 ├── 02-markers-and-emphasis/    README.md + 6 scene dirs
 ├── 03-easing-variety/          README.md + 3 scene dirs
-├── 04-composed-ui/             README.md + 17 scene dirs
+├── 04-composed-ui/             README.md + 18 scene dirs
 ├── 05-transitions-shader/      README.md + 3 scene dirs
 ├── 06-transitions-css/         README.md + 3 scene dirs
 ├── 07-html-in-canvas/          README.md + 5 scene dirs
 ├── 08-svg-and-path/            README.md + 3 scene dirs
-├── 09-counters-and-data/       README.md + 5 scene dirs
+├── 09-counters-and-data/       README.md + 6 scene dirs
 ├── 10-particles-and-ambient/   README.md + 5 scene dirs
 ├── 11-3d-and-parallax/         README.md + 5 scene dirs
 ├── 12-combined-vignettes/      README.md + 7 scene dirs
@@ -149,7 +154,7 @@ skills/website-to-hyperframes/examples/
 
 ---
 
-## THE 79 SCENES — FULL INVENTORY
+## THE 81 SCENES — FULL INVENTORY
 
 ### Section 01 — Typography (11 scenes)
 
@@ -188,7 +193,7 @@ skills/website-to-hyperframes/examples/
 | `scene-02-easing-race` | 6s | 7 balls race the same track over same 2s duration — visceral easing-comparison teaching scene |
 | `scene-03-stagger-origin-showcase` | 6s | 4 panels with same 15 dots — `from: "start" / "center" / "edges" / "end"` side-by-side |
 
-### Section 04 — Composed UI (17 scenes)
+### Section 04 — Composed UI (18 scenes)
 
 | Scene | Duration | Technique |
 |-------|----------|-----------|
@@ -209,6 +214,7 @@ skills/website-to-hyperframes/examples/
 | `scene-15-testimonial-card` | 8s | Customer testimonial — Fraunces italic quote + MJ avatar + Northshore company logo + 5-star rating cascade. Quote types word-by-word. |
 | `scene-16-notification-stack` | 8s | 4 shadcn-style toast notifications cascade in from right (success/info/warning/error) with auto-dismiss progress bars; first auto-dismisses + stack collapses |
 | `scene-17-loading-states` | 7s | 6 loading patterns side-by-side — skeleton / spinner / progress bar / 3-dot / circular / pulse — all seekable |
+| `scene-18-settings-panel` | 8s | Render Preferences modal — toggle + radio + dropdown + slider + color swatches all animating + save→✓ saved button transition |
 
 ### Section 05 — Transitions Shader (2 scenes)
 
@@ -244,7 +250,7 @@ skills/website-to-hyperframes/examples/
 | `scene-02-logo-stroke-draw` | 7s | Brand mark drawing itself — ring + M monogram + serifs + accent dot + arc text. 720px of SVG path via stroke-dashoffset |
 | `scene-03-icon-morph` | 8s | Single SVG path morphs SQUARE → CIRCLE → DIAMOND → STAR → WAVE via d-attribute swaps at timeline keyframes |
 
-### Section 09 — Counters and Data (4 scenes)
+### Section 09 — Counters and Data (6 scenes)
 
 | Scene | Duration | Technique |
 |-------|----------|-----------|
@@ -253,6 +259,7 @@ skills/website-to-hyperframes/examples/
 | `scene-03-counter-million-showcase` | 6s | Canonical 0 → 1,000,000 counter — 33 deterministic `tl.set()` calls with comma formatting |
 | `scene-04-bar-chart-rise` | 7s | 6-bar quarterly growth chart with staggered rise + deterministic value counters + peak bar in amber |
 | `scene-05-sparkline-draw` | 7s | 4-card live-metrics dashboard with SVG sparklines (filled area + stroked line + end-dot pulse), value counters, delta arrows |
+| `scene-06-donut-chart-reveal` | 7s | 4-segment SVG donut (42%/28%/18%/12%) drawn via stroke-dashoffset + center % counter + legend cascade |
 
 ### Section 10 — Particles and Ambient (5 scenes)
 
@@ -429,6 +436,7 @@ All 53 scenes rendered to MP4 at draft quality (24fps) and uploaded. URLs follow
 | scene-03-counter-million-showcase | f30928c0-2baf-41bd-9834-36689ede19f3 |
 | scene-04-bar-chart-rise | 5641f0b1-e014-4b65-8c25-57ba0d318673 |
 | scene-05-sparkline-draw | 436c84c6-63ad-44ed-9a6f-d79fc3b53cf1 |
+| scene-06-donut-chart-reveal | c8ed907c-9477-45ba-9102-997a1e376971 |
 
 ### Section 10 — Particles and Ambient
 | Scene | Asset ID |
@@ -457,6 +465,7 @@ All 53 scenes rendered to MP4 at draft quality (24fps) and uploaded. URLs follow
 | scene-15-testimonial-card | 1b56b2f2-841d-4c8c-ad69-7457c8a0f313 |
 | scene-16-notification-stack | 96518f68-b832-4938-ab89-33081115801e |
 | scene-17-loading-states | d325fe20-e831-474a-bf19-156a02449306 |
+| scene-18-settings-panel | bd8ccb7d-c107-4c25-a73a-61ca9de26be4 |
 
 ### Section 12 — Combined Vignettes
 | Scene | Asset ID |
@@ -472,7 +481,8 @@ All 53 scenes rendered to MP4 at draft quality (24fps) and uploaded. URLs follow
 ### Grand Tour Reel
 | Reel | Asset ID | Duration |
 |---|---|---|
-| grand-tour-79-scenes (current) | 12548e7f-205c-4144-a2be-4423c2ccc16c | 9:07 |
+| grand-tour-81-scenes (current) | 23b285ce-a09a-487a-94d7-53f0c2827f2d | 9:22 |
+| grand-tour-79-scenes (superseded) | 12548e7f-205c-4144-a2be-4423c2ccc16c | 9:07 |
 | grand-tour-77-scenes (superseded) | 417ac325-e606-48f1-b716-8f8747b44d87 | 8:52 |
 | grand-tour-74-scenes (superseded) | aefd8761-7ae5-4399-bed4-3c33ea7dc3bf | 8:30 |
 | grand-tour-71-scenes (superseded) | 2637bc07-ef26-43f2-8ef3-83c21d7aad88 | 8:11 |
@@ -677,10 +687,11 @@ batch_upload_assets supports up to 20 files at once. PUTs can run in parallel vi
 
 ---
 
-## THE 23 COMMITS
+## THE 24 COMMITS
 
 ```
-[pending]  feat(skill): examples library batch 16 — 2 composed-UI common patterns (79 scenes total)
+[pending]  feat(skill): examples library batch 17 — 2 more hand-authored scenes (81 scenes total)
+e0ac2ccf  feat(skill): examples library batch 16 — 2 composed-UI common patterns (79 scenes)
 dbcd6508  feat(skill): examples library batch 15 — 3 hand-authored common-pattern scenes (77 scenes)
 9c667175  feat(skill): examples library batch 14 — 3 hand-authored gap-fillers (74 scenes)
 21cd7f9d  feat(skill): examples library batch 13 — 3 hand-authored gap-fillers (71 scenes)
@@ -705,7 +716,7 @@ a877da70  feat(skill): examples library section 04 — composed UI, 8 scenes
 04827b98  feat(skill): examples library scaffold + section 01 (typography) — 10 scenes
 ```
 
-All on branch `feat/pipeline-quality-v2`, ahead of `origin/feat/pipeline-quality-v2` by 23 commits.
+All on branch `feat/pipeline-quality-v2`, ahead of `origin/feat/pipeline-quality-v2` by 24 commits.
 
 ### What batches 8 + 9 did (docs sync after batch 7)
 
