@@ -73,20 +73,20 @@ Scale snapshot count to the video — not a fixed number. Formula: `max(beats ×
 **⚠ NEVER use `npx hyperframes snapshot`.** The published CLI (0.6.6) is missing critical fixes: sub-comps load before capturing, local-time seek for last beats, Gemini vision descriptions. Always use the local CLI below or all beats after the first may appear black and descriptions.md won't be generated.
 
 ```bash
-# IMPORTANT: .env values are NOT automatically inherited by CLI subprocesses.
-# Always export GEMINI_API_KEY explicitly or Gemini descriptions won't run:
-export GEMINI_API_KEY=$(grep GEMINI_API_KEY .env | cut -d= -f2)
+# The local CLI auto-loads .env from the current working directory, so a
+# .env file in <project-dir> with GEMINI_API_KEY=... is enough — no explicit
+# export needed. If you've set GEMINI_API_KEY directly in your shell env that
+# also works.
 npx tsx packages/cli/src/cli.ts snapshot <project-dir> --frames <N>
 
 # Pass a custom question to Gemini instead of the default prompt:
-export GEMINI_API_KEY=$(grep GEMINI_API_KEY .env | cut -d= -f2)
 npx tsx packages/cli/src/cli.ts snapshot <project-dir> --frames <N> \
   --describe "Is the brand logo visible in every beat? Is any beat showing a black or blank frame?"
 ```
 
 Output lands in `<project-dir>/snapshots/`. Gemini writes `snapshots/descriptions.md` automatically.
 
-**If `descriptions.md` is missing or empty after the snapshot:** `GEMINI_API_KEY` was not set. Re-export and re-run. Do not proceed without Gemini descriptions — visual inspection alone is not sufficient verification.
+**If `descriptions.md` is missing or empty after the snapshot:** `GEMINI_API_KEY` was not set — confirm it's in `<project-dir>/.env` (the CLI loads .env from CWD) or in your shell environment. Re-run after fixing. Do not proceed without Gemini descriptions — visual inspection alone is not sufficient verification.
 
 **Gemini descriptions will flag two frames as "blank/black" — these two are expected and not bugs:**
 

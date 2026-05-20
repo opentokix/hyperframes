@@ -266,7 +266,7 @@ export async function createSvgContactSheet(
   svgsDir: string,
   outputPath: string,
   assetsRootDir?: string,
-): Promise<string | null> {
+): Promise<string[]> {
   const dirsToScan = [svgsDir, assetsRootDir].filter(
     (d): d is string => d !== undefined && existsSync(d),
   );

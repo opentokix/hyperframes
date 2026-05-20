@@ -93,10 +93,16 @@ function buildPrompt(
     const fullDir = join(outputDir, dir);
     if (!existsSync(fullDir)) return [];
     const baseName = baseFile.replace(/\.jpg$/, "");
-    const paginatedRe = new RegExp(`^${baseName}(?:-\\d+)?\\.jpg$`);
+    const paginatedRe = new RegExp(`^${baseName}(?:-(\\d+))?\\.jpg$`);
+    // Sort by the numeric page suffix so `contact-sheet-10.jpg` lands after
+    // `contact-sheet-2.jpg`, not before (default string sort orders them
+    // lexicographically and breaks at 10+ pages). Unpaginated `contact-sheet.jpg`
+    // gets page 0 so it sorts first if it co-exists with paginated files.
     const all = readdirSync(fullDir)
       .filter((f) => paginatedRe.test(f))
-      .sort();
+      .map((f) => ({ name: f, page: parseInt(f.match(paginatedRe)?.[1] ?? "0", 10) }))
+      .sort((a, b) => a.page - b.page)
+      .map((entry) => entry.name);
     if (all.length === 0) return [];
     if (all.length === 1) {
       return [`| \`${dir}/${all[0]}\` | ${label} |`];
@@ -125,9 +131,14 @@ function buildPrompt(
   tableRows.push(
     `| \`extracted/tokens.json\` | Design tokens: ${tokens.colors.length} colors, ${tokens.fonts.length} fonts, ${tokens.headings?.length ?? 0} headings, ${tokens.ctas?.length ?? 0} CTAs |`,
   );
-  tableRows.push(
-    "| `extracted/design-styles.json` | Computed styles from live DOM: typography hierarchy, button/card/nav styles, spacing scale, border-radius, box shadows. Primary data source for DESIGN.md. |",
-  );
+  // design-styles.json is written from a try/catch in capture/index.ts and
+  // gets skipped when the live-DOM style extraction fails. Only list it in the
+  // agent prompt when it actually exists, so the agent isn't pointed at a 404.
+  if (existsSync(join(outputDir, "extracted", "design-styles.json"))) {
+    tableRows.push(
+      "| `extracted/design-styles.json` | Computed styles from live DOM: typography hierarchy, button/card/nav styles, spacing scale, border-radius, box shadows. Primary data source for DESIGN.md. |",
+    );
+  }
   tableRows.push(
     "| `extracted/asset-descriptions.md` | One-line description of every downloaded asset. Read this for asset selection — only open individual files for safe-zone checking. |",
   );
