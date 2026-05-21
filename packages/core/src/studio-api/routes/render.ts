@@ -86,6 +86,16 @@ export function registerRenderRoutes(api: Hono, adapter: StudioApiAdapter): void
       composition = body.composition;
     }
 
+    // Preflight: verify external dependencies (FFmpeg, Chrome) are available
+    // before starting the render. Without this, the render fails deep in the
+    // pipeline with an opaque ENOENT or "browser not found" error.
+    if (adapter.preflightCheck) {
+      const preflight = await adapter.preflightCheck();
+      if (preflight) {
+        return c.json({ error: preflight.error, detail: preflight.detail }, 422);
+      }
+    }
+
     const now = new Date();
     const datePart = now.toISOString().slice(0, 10);
     const timePart = now.toTimeString().slice(0, 8).replace(/:/g, "-");

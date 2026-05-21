@@ -38,6 +38,68 @@ function buildApp(spy: ReturnType<typeof vi.fn>): { app: Hono; cleanup: () => vo
   return { app, cleanup: () => rmSync(rendersDir, { recursive: true, force: true }) };
 }
 
+describe("POST /projects/:id/render — preflight check", () => {
+  it("returns 422 with error details when preflightCheck fails", async () => {
+    const spy = vi.fn();
+    const { adapter, rendersDir } = createAdapter(spy);
+    adapter.preflightCheck = async () => ({
+      error: "FFmpeg not found",
+      detail: "FFmpeg is required but was not found in your PATH.",
+    });
+    const app = new Hono();
+    registerRenderRoutes(app, adapter);
+    try {
+      const res = await app.request("http://localhost/projects/demo/render", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ fps: 30, quality: "standard", format: "mp4" }),
+      });
+      expect(res.status).toBe(422);
+      const body = await res.json();
+      expect(body.error).toBe("FFmpeg not found");
+      expect(body.detail).toContain("FFmpeg is required");
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      rmSync(rendersDir, { recursive: true, force: true });
+    }
+  });
+
+  it("proceeds normally when preflightCheck passes", async () => {
+    const spy = vi.fn();
+    const { adapter, rendersDir } = createAdapter(spy);
+    adapter.preflightCheck = async () => null;
+    const app = new Hono();
+    registerRenderRoutes(app, adapter);
+    try {
+      const res = await app.request("http://localhost/projects/demo/render", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ fps: 30, quality: "standard", format: "mp4" }),
+      });
+      expect(res.status).toBe(200);
+      expect(spy).toHaveBeenCalledOnce();
+    } finally {
+      rmSync(rendersDir, { recursive: true, force: true });
+    }
+  });
+
+  it("proceeds normally when preflightCheck is not provided", async () => {
+    const spy = vi.fn();
+    const { app, cleanup } = buildApp(spy);
+    try {
+      const res = await app.request("http://localhost/projects/demo/render", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ fps: 30, quality: "standard", format: "mp4" }),
+      });
+      expect(res.status).toBe(200);
+      expect(spy).toHaveBeenCalledOnce();
+    } finally {
+      cleanup();
+    }
+  });
+});
+
 describe("POST /projects/:id/render — outputResolution forwarding", () => {
   it("forwards a valid resolution preset to the adapter", async () => {
     const spy = vi.fn();

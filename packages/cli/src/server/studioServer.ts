@@ -205,6 +205,32 @@ export function createStudioServer(options: StudioServerOptions): StudioServer {
 
     resolveProject: (id: string) => (id === projectId ? project : null),
 
+    async preflightCheck() {
+      const { findFFmpeg, getFFmpegInstallHint } = await import("../browser/ffmpeg.js");
+      const { findBrowser } = await import("../browser/manager.js");
+
+      if (!findFFmpeg()) {
+        const hint = getFFmpegInstallHint();
+        return {
+          error: "FFmpeg not found",
+          detail: `FFmpeg is required to render video but was not found in your PATH.\n\nInstall it:\n  ${hint}`,
+        };
+      }
+
+      const browser = await findBrowser();
+      if (!browser) {
+        return {
+          error: "Chrome not found",
+          detail:
+            "A Chrome-based browser is required to render but none was found.\n\n" +
+            "Install the headless shell:\n  npx @puppeteer/browsers install chrome-headless-shell\n\n" +
+            "Or run:\n  hyperframes browser install",
+        };
+      }
+
+      return null;
+    },
+
     async bundle(dir: string): Promise<string | null> {
       try {
         const { bundleToSingleHtml } = await import("@hyperframes/core/compiler");

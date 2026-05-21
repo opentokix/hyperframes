@@ -117,4 +117,12 @@ export interface StudioApiAdapter {
     project: ResolvedProject;
     blockName: string;
   }): Promise<{ written: string[]; block: RegistryItem }>;
+
+  /**
+   * Optional: run a preflight check before starting a render.
+   * Returns `null` when everything is ready, or an object with
+   * `error` (short label) and `detail` (actionable fix instructions)
+   * when a required dependency is missing.
+   */
+  preflightCheck?(): Promise<{ error: string; detail: string } | null>;
 }

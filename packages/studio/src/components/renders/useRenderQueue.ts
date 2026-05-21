@@ -136,11 +136,22 @@ export function useRenderQueue(projectId: string | null) {
         return;
       }
       if (!res.ok) {
+        let errorMessage = `Server error (${res.status}). Check the terminal for details.`;
+        try {
+          const body = await res.json();
+          if (body.detail) {
+            errorMessage = body.detail;
+          } else if (body.error) {
+            errorMessage = body.error;
+          }
+        } catch {
+          // Response wasn't JSON — keep the generic message
+        }
         const failedJob: RenderJob = {
           id: crypto.randomUUID(),
           status: "failed",
           progress: 0,
-          error: `Server error (${res.status}). Check the terminal for details.`,
+          error: errorMessage,
           filename: "Export failed",
           createdAt: startTime,
         };
