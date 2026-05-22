@@ -175,7 +175,7 @@ If any are missing from the beat spec, the beat is under-defined. Don't fill the
 - CSS CENTERING: no `transform: translate(-50%, -50%)` with GSAP transforms. Use flexbox or `xPercent/yPercent`.
 - QUERYSELECTOR: `document.getElementById("id")` with null guards. No method calls without null check.
 - CHARACTER SPANS: `display:inline-block` on spaces collapses them. Use `&nbsp;` or per-word spans.
-- COUNTERS: no `onUpdate` callbacks. Discrete `tl.set(el, {textContent: "42"}, 2.5)` at timestamps.
+- COUNTERS: no `onUpdate` for numeric counters — use discrete `tl.set(el, {textContent: "42"}, 2.5)` at timestamps. `onUpdate` and `tl.call()` ARE supported for canvas/WebGL rendering loops and character-by-character typing — see capabilities.md §10.
 - TIMELINE: `window.__timelines["beat-N-name"] = tl` synchronously. Key = `data-composition-id`.
 - DETERMINISTIC: no `Math.random()`, `Date.now()`, `requestAnimationFrame`, `repeat:-1`.
 - Always `tl.fromTo()` not `tl.from()` for entrances.

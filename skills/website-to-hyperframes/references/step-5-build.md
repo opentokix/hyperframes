@@ -298,9 +298,13 @@ Each sub-agent reads [beat-builder-guide.md](beat-builder-guide.md) — it has e
 ```
 Build the composition for Beat N. Save to compositions/beat-N-name.html.
 
-FIRST: Read skills/website-to-hyperframes/references/beat-builder-guide.md end to end.
-It has your full workflow, all rules, easing vocabulary, and file references.
-Follow its workflow exactly:
+FIRST: Locate and read the beat-builder guide. Your CWD is the project directory, so
+the skill lives outside it — run this to find it:
+
+  find / -path '*/website-to-hyperframes/references/beat-builder-guide.md' -maxdepth 12 2>/dev/null | head -1
+
+Read that file end to end. It has your full workflow, all rules, easing vocabulary,
+and file references. Follow its workflow exactly:
   build → lint (`npx hyperframes lint .`)
         → snapshot (`npx hyperframes snapshot . --frames 3`)
         → view contact sheet AND read snapshots/descriptions.md
