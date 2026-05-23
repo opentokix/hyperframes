@@ -725,42 +725,20 @@
 
       tl.to(S, { p: 1, drift: 15, duration: 15, ease: "none", onUpdate: render }, 0);
 
-      // ── Act 1 (0–3.5s): iPhone FRONT — hero close-up showing hyperframes.dev
-      tl.to(S, { phRY: PI + 0.06, phRX: 0.015, duration: 1.5, ease: breatheEase }, 0.3);
-      tl.to(S, { phRY: PI - 0.04, phRX: -0.01, duration: 1.5, ease: breatheEase }, 1.8);
+      // ── macOS Tahoe: MacBook hero — zoomed close, slow pull-back ──
+      // Move iPhone off screen immediately
+      tl.set(S, { phX: 10 }, 0);
+      // Start MacBook centered and close
+      tl.set(S, { lpX: 0, lpRY: 0 }, 0);
+      tl.set(S, { cX: 0, clX: 0, cZ: 4.5, cY: 0.4, clY: -0.1 }, 0);
 
-      // ── Act 2 (3.5–7s): iPhone spins 180° to show BACK (camera, titanium, Apple logo)
-      tl.to(S, { phRY: PI * 2, duration: 2.2, ease: spinEase }, 3.5);
-      tl.to(S, { cZ: 4.8, cY: 0.25, duration: 2, ease: driftEase }, 3.5);
-      // Hold back view — slight orbit to appreciate hardware
-      tl.to(
-        S,
-        { phRY: PI * 2 + 0.15, phRX: 0.04, cX: 0.15, duration: 1.5, ease: breatheEase },
-        5.5,
-      );
+      // Slow zoom out
+      tl.to(S, { cZ: 7, cY: 0.6, duration: 12, ease: driftEase }, 0.5);
 
-      // ── Act 3 (7–9s): iPhone spins back to front, then exits LEFT off screen
-      tl.to(S, { phRY: PI * 3, duration: 1.8, ease: snapEase }, 7);
-      tl.to(S, { cZ: 3.5, cY: 0.2, duration: 1.5, ease: driftEase }, 7);
-      tl.to(S, { phX: -6, phZ: 0.3, duration: 2, ease: spinEase }, 8);
-
-      // ── Act 4 (9–11s): MacBook enters from right, hero close-up
-      tl.to(S, { lpX: 0, duration: 2, ease: enterEase }, 9);
-      tl.to(S, { cX: 0, clX: 0, cZ: 5, cY: 0.3, clY: -0.1, duration: 2, ease: driftEase }, 9);
-      tl.to(S, { lpRY: 0.06, duration: 1.5, ease: breatheEase }, 10);
-
-      // ── Act 5 (11–12.5s): iPhone returns, both settle for turntable
-      tl.to(S, { phX: -2.0, duration: 1.5, ease: enterEase }, 11);
-      tl.to(S, { lpX: 2.2, duration: 1.5, ease: breatheEase }, 11);
-      tl.to(
-        S,
-        { cX: 0.1, clX: 0.1, cZ: 7.5, cY: 0.5, clY: -0.1, duration: 1.5, ease: driftEase },
-        11,
-      );
-      tl.to(S, { phRY: PI * 3, lpRY: 0, duration: 1, ease: breatheEase }, 11);
-
-      // ── Act 6 (12.5–15s): 360° turntable — both devices rotate together
-      tl.to(S, { turn: PI * 2, duration: 2.5, ease: spinEase }, 12.5);
+      // Gentle breathing tilt
+      tl.to(S, { lpRY: 0.04, duration: 4, ease: breatheEase }, 1);
+      tl.to(S, { lpRY: -0.03, duration: 4, ease: breatheEase }, 5);
+      tl.to(S, { lpRY: 0.02, duration: 4, ease: breatheEase }, 9);
 
       // ── Live HTML Animations (captured to 3D textures every frame) ──
       // Title fade in
