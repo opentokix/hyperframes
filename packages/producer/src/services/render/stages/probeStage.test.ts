@@ -21,6 +21,10 @@ describe("hasScriptedAudioVolumeAutomation", () => {
     ).toBe(true);
   });
 
+  it("parses script tags with whitespace before the closing bracket", () => {
+    expect(hasScriptedAudioVolumeAutomation(`<script>audio.volume = 0.5;</script >`, 1)).toBe(true);
+  });
+
   it("requires audio metadata", () => {
     expect(
       hasScriptedAudioVolumeAutomation(`<script>gsap.to(audio, { volume: 1 });</script>`, 0),

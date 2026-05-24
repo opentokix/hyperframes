@@ -28,6 +28,7 @@
  */
 
 import { join } from "node:path";
+import { parseHTML } from "linkedom";
 import {
   type CaptureOptions,
   type CaptureSession,
@@ -91,8 +92,9 @@ export interface ProbeStageResult {
 export function hasScriptedAudioVolumeAutomation(html: string, audioCount: number): boolean {
   if (audioCount <= 0) return false;
 
-  const scriptBodies = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
-    .map((match) => match[1] ?? "")
+  const { document } = parseHTML(html);
+  const scriptBodies = [...document.querySelectorAll("script")]
+    .map((script) => script.textContent ?? "")
     .join("\n");
   if (!scriptBodies) return false;
 
