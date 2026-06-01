@@ -9,9 +9,11 @@ import {
   METHOD_LABELS,
   METHOD_TOOLTIPS,
   PERCENT_PROPS,
+  PROP_CONSTRAINTS,
   PROP_LABELS,
   PROP_TOOLTIPS,
   PROP_UNITS,
+  clampPropertyValue,
 } from "./gsapAnimationConstants";
 import { buildTweenSummary } from "./gsapAnimationHelpers";
 import { EaseCurveSection } from "./EaseCurveSection";
@@ -27,7 +29,11 @@ function displayValue(prop: string, val: number | string): string {
 }
 
 function adjustedValue(prop: string, raw: string): string {
-  if (isPercentProp(prop)) return String(Math.max(0, Math.min(1, Number(raw) / 100)));
+  if (isPercentProp(prop)) return String(clampPropertyValue(prop, Number(raw) / 100));
+  const num = Number(raw);
+  if (!Number.isNaN(num) && PROP_CONSTRAINTS[prop]) {
+    return String(clampPropertyValue(prop, num));
+  }
   return raw;
 }
 
