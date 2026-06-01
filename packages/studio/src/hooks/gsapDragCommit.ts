@@ -24,29 +24,17 @@ export interface GsapPositionCommitCallbacks {
 // fallow-ignore-next-line complexity
 export function findGsapPositionAnimation(animations: GsapAnimation[]): GsapAnimation | null {
   if (animations.length === 0) return null;
-
-  let setFallback: GsapAnimation | null = null;
-
+  // Only intercept keyframed tweens — flat tweens (to/from/fromTo/set) are
+  // handled correctly by the standard CSS offset path which persists inline
+  // styles. Keyframed tweens need the GSAP path for auto-keyframing.
   for (const anim of animations) {
-    if (anim.method === "from") continue;
-
-    const hasPositionProps = "x" in anim.properties || "y" in anim.properties;
-    const hasPositionKeyframes =
-      anim.keyframes?.keyframes.some((kf) => "x" in kf.properties || "y" in kf.properties) ?? false;
-
-    if (!hasPositionProps && !hasPositionKeyframes) continue;
-
-    // Prefer to()/fromTo()/keyframed over set() — set is often just an initial
-    // positioning that shouldn't be the drag target when a real tween exists.
-    if (anim.method === "set") {
-      if (!setFallback) setFallback = anim;
-      continue;
-    }
-
-    return anim;
+    if (!anim.keyframes) continue;
+    const hasPosition = anim.keyframes.keyframes.some(
+      (kf) => "x" in kf.properties || "y" in kf.properties,
+    );
+    if (hasPosition) return anim;
   }
-
-  return setFallback;
+  return null;
 }
 
 /**
@@ -111,97 +99,23 @@ export function commitGsapPositionDrag(
   const currentPos = readGsapPositionAtPercentage(anim, pct);
   const newX = Math.round(currentPos.x + studioOffset.x);
   const newY = Math.round(currentPos.y + studioOffset.y);
-  const dx = Math.round(studioOffset.x);
-  const dy = Math.round(studioOffset.y);
 
-  if (anim.keyframes) {
-    const clampedPct = Math.max(0, Math.min(100, Math.round(pct)));
-    void callbacks.commitMutation(
-      selection,
-      {
-        type: "add-keyframe",
-        animationId: anim.id,
-        percentage: clampedPct,
-        properties: { x: newX, y: newY } as Record<string, number | string>,
-      },
-      {
-        label: `Move layer (keyframe ${clampedPct}%)`,
-        coalesceKey: `gsap-drag:${anim.id}:kf:${clampedPct}`,
-        softReload: true,
-      },
-    );
-  } else if (anim.method === "fromTo") {
-    // Shift both from and to properties by the same delta so the entire
-    // animation path moves uniformly instead of just the end position.
-    const fromX = Math.round(Number(anim.fromProperties?.x ?? 0) + dx);
-    const fromY = Math.round(Number(anim.fromProperties?.y ?? 0) + dy);
-    void callbacks.commitMutation(
-      selection,
-      {
-        type: "update-from-property",
-        animationId: anim.id,
-        property: "x",
-        value: fromX,
-      },
-      {
-        label: "Move layer (GSAP from x)",
-        coalesceKey: `gsap-drag:${anim.id}:from-x`,
-        softReload: false,
-      },
-    );
-    void callbacks.commitMutation(
-      selection,
-      {
-        type: "update-from-property",
-        animationId: anim.id,
-        property: "y",
-        value: fromY,
-      },
-      {
-        label: "Move layer (GSAP from y)",
-        coalesceKey: `gsap-drag:${anim.id}:from-y`,
-        softReload: false,
-      },
-    );
-    void callbacks.commitMutation(
-      selection,
-      { type: "update-property", animationId: anim.id, property: "x", value: newX },
-      {
-        label: "Move layer (GSAP x)",
-        coalesceKey: `gsap-drag:${anim.id}:x`,
-        softReload: false,
-      },
-    );
-    void callbacks.commitMutation(
-      selection,
-      { type: "update-property", animationId: anim.id, property: "y", value: newY },
-      {
-        label: "Move layer (GSAP y)",
-        coalesceKey: `gsap-drag:${anim.id}:y`,
-        softReload: true,
-      },
-    );
-  } else {
-    // to() or set() — update properties directly
-    void callbacks.commitMutation(
-      selection,
-      { type: "update-property", animationId: anim.id, property: "x", value: newX },
-      {
-        label: "Move layer (GSAP x)",
-        coalesceKey: `gsap-drag:${anim.id}:x`,
-        softReload: false,
-      },
-    );
-    void callbacks.commitMutation(
-      selection,
-      { type: "update-property", animationId: anim.id, property: "y", value: newY },
-      {
-        label: "Move layer (GSAP y)",
-        coalesceKey: `gsap-drag:${anim.id}:y`,
-        softReload: true,
-      },
-    );
-  }
+  // Only keyframed tweens reach this point (flat tweens use the CSS offset path).
+  const clampedPct = Math.max(0, Math.min(100, Math.round(pct)));
+  void callbacks.commitMutation(
+    selection,
+    {
+      type: "add-keyframe",
+      animationId: anim.id,
+      percentage: clampedPct,
+      properties: { x: newX, y: newY } as Record<string, number | string>,
+    },
+    {
+      label: `Move layer (keyframe ${clampedPct}%)`,
+      coalesceKey: `gsap-drag:${anim.id}:kf:${clampedPct}`,
+      softReload: true,
+    },
+  );
 
   clearStudioPathOffset(selection.element);
 }
