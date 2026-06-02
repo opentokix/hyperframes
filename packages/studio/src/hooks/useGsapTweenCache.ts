@@ -34,7 +34,7 @@ export function getAnimationsForElement(
   );
 }
 
-async function fetchParsedAnimations(
+export async function fetchParsedAnimations(
   projectId: string,
   sourceFile: string,
 ): Promise<ParsedGsap | null> {

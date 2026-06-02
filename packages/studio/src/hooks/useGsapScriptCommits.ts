@@ -291,9 +291,9 @@ export function useGsapScriptCommits({
       const start = Math.round(rawStart * 1000) / 1000;
       const toDefaults: Record<string, Record<string, number>> = {
         from: { opacity: 0 },
-        to: { opacity: 1 },
+        to: { x: 0, y: 0, opacity: 1 },
         set: { opacity: 1 },
-        fromTo: { opacity: 1 },
+        fromTo: { x: 0, y: 0, opacity: 1 },
       };
 
       await commitMutation(
@@ -453,34 +453,13 @@ export function useGsapScriptCommits({
 
   const convertToKeyframes = useCallback(
     (selection: DomEditSelection, animationId: string) => {
-      const sf = selection.sourceFile || activeCompPath || "index.html";
-      const elementId = selection.id;
-      void executeOptimistic<KeyframeCacheEntry | undefined>({
-        apply: () => {
-          const prev = readKeyframeSnapshot(sf, elementId);
-          if (!prev) {
-            writeKeyframeCache(sf, elementId, {
-              format: "percentage",
-              keyframes: [
-                { percentage: 0, properties: {} },
-                { percentage: 100, properties: {} },
-              ],
-            });
-          }
-          return prev;
-        },
-        persist: () =>
-          commitMutation(
-            selection,
-            { type: "convert-to-keyframes", animationId },
-            { label: "Convert to keyframes" },
-          ),
-        rollback: (prev) => {
-          writeKeyframeCache(sf, elementId, prev);
-        },
-      });
+      void commitMutation(
+        selection,
+        { type: "convert-to-keyframes", animationId },
+        { label: "Convert to keyframes" },
+      );
     },
-    [commitMutation, activeCompPath],
+    [commitMutation],
   );
 
   const removeAllKeyframes = useCallback(

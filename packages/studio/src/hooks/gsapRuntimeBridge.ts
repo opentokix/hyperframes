@@ -131,8 +131,13 @@ export async function tryGsapDragIntercept(
   animations: GsapAnimation[],
   iframe: HTMLIFrameElement | null,
   commitMutation: GsapDragCommitCallbacks["commitMutation"],
+  fetchFallbackAnimations?: () => Promise<GsapAnimation[]>,
 ): Promise<boolean> {
-  const posAnim = findGsapPositionAnimation(animations);
+  let posAnim = findGsapPositionAnimation(animations);
+  if (!posAnim && fetchFallbackAnimations) {
+    const fresh = await fetchFallbackAnimations();
+    posAnim = findGsapPositionAnimation(fresh);
+  }
   if (!posAnim) return false;
 
   const selector = selectorForSelection(selection);

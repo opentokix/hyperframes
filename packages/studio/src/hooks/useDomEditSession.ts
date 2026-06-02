@@ -20,6 +20,8 @@ import {
   useGsapAnimationsForElement,
   useGsapCacheVersion,
   usePopulateKeyframeCacheForFile,
+  fetchParsedAnimations,
+  getAnimationsForElement,
 } from "./useGsapTweenCache";
 import { tryGsapDragIntercept } from "./gsapRuntimeBridge";
 
@@ -301,12 +303,27 @@ export function useDomEditSession({
           selectedGsapAnimations,
           previewIframeRef.current,
           gsapCommitMutation,
+          async () => {
+            const pid = projectId;
+            if (!pid) return [];
+            const parsed = await fetchParsedAnimations(pid, gsapSourceFile);
+            if (!parsed) return [];
+            const target = { id: selection.id ?? null, selector: selection.selector ?? null };
+            return getAnimationsForElement(parsed.animations, target);
+          },
         );
         if (handled) return;
       }
       handleDomPathOffsetCommit(selection, next);
     },
-    [handleDomPathOffsetCommit, selectedGsapAnimations, gsapCommitMutation, previewIframeRef],
+    [
+      handleDomPathOffsetCommit,
+      selectedGsapAnimations,
+      gsapCommitMutation,
+      previewIframeRef,
+      projectId,
+      gsapSourceFile,
+    ],
   );
 
   const handleGsapUpdateProperty = useCallback(
