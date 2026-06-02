@@ -62,20 +62,11 @@ function useKeyframeToggle(session?: DomEditSessionSlice) {
             );
             if (existing) {
               session.handleGsapRemoveKeyframe(kfAnim.id, existing.percentage);
-            } else {
-              session.handleGsapAddKeyframe(kfAnim.id, pct, "x", 0);
             }
+            // Adding a keyframe with correct interpolated values requires
+            // the runtime bridge (drag flow). The toggle only removes.
           } else if (flatAnim) {
-            const elStart = Number.parseFloat(sel.dataAttributes?.start ?? "0") || 0;
-            const elDuration = Number.parseFloat(sel.dataAttributes?.duration ?? "1") || 1;
-            const pct =
-              elDuration > 0
-                ? Math.max(0, Math.min(100, Math.round(((t - elStart) / elDuration) * 100)))
-                : 0;
             session.handleGsapConvertToKeyframes(flatAnim.id);
-            if (pct > 0 && pct < 100) {
-              session.handleGsapAddKeyframe(flatAnim.id, pct, "x", 0);
-            }
           }
         }
       : undefined;
