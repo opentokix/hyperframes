@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { NLELayout } from "./nle/NLELayout";
 import { CaptionOverlay } from "../captions/components/CaptionOverlay";
 import { CaptionTimeline } from "../captions/components/CaptionTimeline";
 import { DomEditOverlay } from "./editor/DomEditOverlay";
+import { SnapToolbar } from "./editor/SnapToolbar";
 import { StudioFeedbackBar } from "./StudioFeedbackBar";
 import type { TimelineElement } from "../player";
 import type { BlockedTimelineEditIntent } from "../player/components/timelineEditing";
@@ -14,6 +15,7 @@ import {
 import { useStudioContext } from "../contexts/StudioContext";
 import { useDomEditContext } from "../contexts/DomEditContext";
 import type { BlockPreviewInfo } from "./sidebar/BlocksTab";
+import { readStudioUiPreferences } from "../utils/studioUiPreferences";
 
 export interface StudioPreviewAreaProps {
   timelineToolbar: ReactNode;
@@ -103,6 +105,17 @@ export function StudioPreviewArea({
     handleDomRotationCommit,
   } = useDomEditContext();
 
+  // fallow-ignore-next-line complexity
+  const [snapPrefs, setSnapPrefs] = useState(() => {
+    const p = readStudioUiPreferences();
+    return {
+      snapEnabled: p.snapEnabled ?? true,
+      gridVisible: p.gridVisible ?? false,
+      gridSpacing: p.gridSpacing ?? 50,
+      snapToGrid: p.snapToGrid ?? false,
+    };
+  });
+
   return (
     <div className="flex-1 flex flex-col relative min-w-0">
       <div className="flex-1 min-h-0 relative">
@@ -157,31 +170,36 @@ export function StudioPreviewArea({
             ) : captionEditMode ? (
               <CaptionOverlay iframeRef={previewIframeRef} />
             ) : STUDIO_INSPECTOR_PANELS_ENABLED ? (
-              <DomEditOverlay
-                iframeRef={previewIframeRef}
-                activeCompositionPath={activeCompPath}
-                hoverSelection={
-                  STUDIO_PREVIEW_SELECTION_ENABLED &&
-                  !captionEditMode &&
-                  !compositionLoading &&
-                  !isPlaying
-                    ? domEditHoverSelection
-                    : null
-                }
-                selection={shouldShowSelectedDomBounds ? domEditSelection : null}
-                groupSelections={shouldShowSelectedDomBounds ? domEditGroupSelections : []}
-                allowCanvasMovement={STUDIO_PREVIEW_MANUAL_EDITING_ENABLED}
-                onCanvasMouseDown={handlePreviewCanvasMouseDown}
-                onCanvasPointerMove={handlePreviewCanvasPointerMove}
-                onCanvasPointerLeave={handlePreviewCanvasPointerLeave}
-                onSelectionChange={applyDomSelection}
-                onBlockedMove={handleBlockedDomMove}
-                onManualDragStart={handleDomManualDragStart}
-                onPathOffsetCommit={handleDomPathOffsetCommit}
-                onGroupPathOffsetCommit={handleDomGroupPathOffsetCommit}
-                onBoxSizeCommit={handleDomBoxSizeCommit}
-                onRotationCommit={handleDomRotationCommit}
-              />
+              <>
+                <DomEditOverlay
+                  iframeRef={previewIframeRef}
+                  activeCompositionPath={activeCompPath}
+                  hoverSelection={
+                    STUDIO_PREVIEW_SELECTION_ENABLED &&
+                    !captionEditMode &&
+                    !compositionLoading &&
+                    !isPlaying
+                      ? domEditHoverSelection
+                      : null
+                  }
+                  selection={shouldShowSelectedDomBounds ? domEditSelection : null}
+                  groupSelections={shouldShowSelectedDomBounds ? domEditGroupSelections : []}
+                  allowCanvasMovement={STUDIO_PREVIEW_MANUAL_EDITING_ENABLED}
+                  onCanvasMouseDown={handlePreviewCanvasMouseDown}
+                  onCanvasPointerMove={handlePreviewCanvasPointerMove}
+                  onCanvasPointerLeave={handlePreviewCanvasPointerLeave}
+                  onSelectionChange={applyDomSelection}
+                  onBlockedMove={handleBlockedDomMove}
+                  onManualDragStart={handleDomManualDragStart}
+                  onPathOffsetCommit={handleDomPathOffsetCommit}
+                  onGroupPathOffsetCommit={handleDomGroupPathOffsetCommit}
+                  onBoxSizeCommit={handleDomBoxSizeCommit}
+                  onRotationCommit={handleDomRotationCommit}
+                  gridVisible={snapPrefs.gridVisible}
+                  gridSpacing={snapPrefs.gridSpacing}
+                />
+                <SnapToolbar onSnapChange={setSnapPrefs} />
+              </>
             ) : null
           }
           timelineFooter={

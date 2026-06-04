@@ -23,6 +23,7 @@ import {
 } from "./domEditOverlayGeometry";
 import { type GestureKind, type GestureState } from "./domEditOverlayGestures";
 import type { UseDomEditOverlayGesturesOptions } from "./useDomEditOverlayGestures";
+import { collectSnapContext, buildExcludeKeys } from "./snapTargetCollection";
 
 export function startGroupDrag(
   e: React.PointerEvent<HTMLElement>,
@@ -61,6 +62,18 @@ export function startGroupDrag(
     members.push(result.member);
   }
 
+  const overlayEl = opts.overlayRef.current;
+  const iframe = opts.iframeRef.current;
+  const snapContext =
+    overlayEl && iframe
+      ? collectSnapContext({
+          overlayEl,
+          iframe,
+          excludeKeys: buildExcludeKeys({ groupSelections: items.map((i) => i.selection) }),
+          activeCompositionPath: null,
+        })
+      : undefined;
+
   e.preventDefault();
   e.stopPropagation();
   e.currentTarget.setPointerCapture(e.pointerId);
@@ -70,10 +83,12 @@ export function startGroupDrag(
     startY: e.clientY,
     originItems: items,
     members,
+    snapContext,
   };
   return true;
 }
 
+// fallow-ignore-next-line complexity
 export function startGesture(
   kind: GestureKind,
   e: React.PointerEvent<HTMLElement>,
@@ -124,6 +139,18 @@ export function startGesture(
   const overlayBounds = overlayEl?.getBoundingClientRect();
   const centerX = (overlayBounds?.left ?? 0) + rect.left + rect.width / 2;
   const centerY = (overlayBounds?.top ?? 0) + rect.top + rect.height / 2;
+
+  const iframe = opts.iframeRef.current;
+  const snapContext =
+    (kind === "drag" || kind === "resize") && overlayEl && iframe
+      ? collectSnapContext({
+          overlayEl,
+          iframe,
+          excludeKeys: buildExcludeKeys({ selection: sel }),
+          activeCompositionPath: null,
+        })
+      : undefined;
+
   e.preventDefault();
   e.stopPropagation();
   e.currentTarget.setPointerCapture(e.pointerId);
@@ -150,6 +177,7 @@ export function startGesture(
     editScaleX: rect.editScaleX,
     editScaleY: rect.editScaleY,
     manualEditDragToken,
+    snapContext,
   };
   return true;
 }

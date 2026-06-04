@@ -1,4 +1,4 @@
-// fallow-ignore-file unused-file code-duplication
+// fallow-ignore-file code-duplication
 import type { DomEditSelection } from "./domEditing";
 import type { DomEditContextOptions } from "./domEditingTypes";
 import { collectDomEditLayerItems } from "./domEditingLayers";

@@ -10,6 +10,8 @@ import {
 } from "./domEditOverlayGestures";
 import { useDomEditOverlayRects } from "./useDomEditOverlayRects";
 import { createDomEditOverlayGestureHandlers } from "./useDomEditOverlayGestures";
+import { SnapGuideOverlay, type SnapGuidesState } from "./SnapGuideOverlay";
+import { GridOverlay } from "./GridOverlay";
 
 // Re-exports for external consumers — preserving existing import paths.
 export {
@@ -61,6 +63,14 @@ interface DomEditOverlayProps {
     next: { width: number; height: number },
   ) => Promise<void> | void;
   onRotationCommit: (selection: DomEditSelection, next: { angle: number }) => Promise<void> | void;
+  gridVisible?: boolean;
+  gridSpacing?: number;
+  compositionScaleX?: number;
+  compositionScaleY?: number;
+  compositionLeft?: number;
+  compositionTop?: number;
+  compositionWidth?: number;
+  compositionHeight?: number;
 }
 
 export const DomEditOverlay = memo(function DomEditOverlay({
@@ -75,6 +85,14 @@ export const DomEditOverlay = memo(function DomEditOverlay({
   onCanvasPointerLeave,
   onSelectionChange,
   onBlockedMove,
+  gridVisible = false,
+  gridSpacing = 50,
+  compositionScaleX = 1,
+  compositionScaleY = 1,
+  compositionLeft = 0,
+  compositionTop = 0,
+  compositionWidth = 0,
+  compositionHeight = 0,
   onManualDragStart,
   onPathOffsetCommit,
   onGroupPathOffsetCommit,
@@ -89,6 +107,7 @@ export const DomEditOverlay = memo(function DomEditOverlay({
   const suppressNextBoxClickRef = useRef(false);
   const suppressNextBoxMouseDownRef = useRef(false);
   const suppressNextOverlayMouseDownRef = useRef(false);
+  const snapGuidesRef = useRef<SnapGuidesState | null>(null);
   const rafPausedRef = useRef(false);
 
   const selectionRef = useRef(selection);
@@ -158,6 +177,7 @@ export const DomEditOverlay = memo(function DomEditOverlay({
     onRotationCommitRef,
     onCanvasPointerMoveRef,
     onCanvasMouseDown,
+    snapGuidesRef,
   });
 
   const selectionKey = useMemo(() => {
@@ -192,6 +212,7 @@ export const DomEditOverlay = memo(function DomEditOverlay({
     }
   };
 
+  // fallow-ignore-next-line complexity
   const handleOverlayPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!allowCanvasMovement || event.button !== 0) return;
     if (event.shiftKey) {
@@ -387,6 +408,21 @@ export const DomEditOverlay = memo(function DomEditOverlay({
           </div>
         </>
       )}
+      <GridOverlay
+        visible={gridVisible}
+        spacing={gridSpacing}
+        scaleX={compositionScaleX}
+        scaleY={compositionScaleY}
+        compositionLeft={compositionLeft}
+        compositionTop={compositionTop}
+        compositionWidth={compositionWidth}
+        compositionHeight={compositionHeight}
+      />
+      <SnapGuideOverlay
+        snapGuidesRef={snapGuidesRef}
+        overlayWidth={compositionWidth}
+        overlayHeight={compositionHeight}
+      />
     </div>
   );
 });

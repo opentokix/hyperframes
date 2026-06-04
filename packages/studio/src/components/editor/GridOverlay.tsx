@@ -1,4 +1,3 @@
-// fallow-ignore-file unused-file
 import { memo } from "react";
 
 interface GridOverlayProps {
