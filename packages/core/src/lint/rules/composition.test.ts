@@ -521,10 +521,7 @@ describe("composition rules", () => {
 
   describe("standalone_composition_wrapped_in_template", () => {
     it("flags root index.html wrapped in template", async () => {
-      // Fixture deliberately uses id="root" — a non-`-template` suffix — so
-      // it stays a true positive after the sub-composition-template
-      // self-suppression FP fix. The `-template` id suffix is the documented
-      // sub-composition signal; anything else is a likely misuse.
+      // id="root" (no `-template` suffix) — survives the sub-comp self-suppression FP fix.
       const html = `<template id="root">
   <div data-composition-id="main" data-width="1920" data-height="1080">
     <script>
@@ -1114,10 +1111,7 @@ describe("composition rules", () => {
     });
 
     it("does NOT fire when every sub-comp host uses data-track-index (native scheduling)", async () => {
-      // Bundled `warm-grain` example pattern: sub-comps are placed on
-      // parallel tracks via data-track-index and managed by the runtime.
-      // Master TL animates the A-roll (not sub-comp hosts), which is
-      // legitimate — sub-comps are static/CSS and don't expect master seeks.
+      // Mirrors the bundled `warm-grain` example.
       const html = `<!DOCTYPE html>
 <html><body>
   <div data-composition-id="main" data-width="1920" data-height="1080">

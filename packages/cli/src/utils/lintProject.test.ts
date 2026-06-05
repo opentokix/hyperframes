@@ -1,7 +1,4 @@
 // fallow-ignore-file clone-families
-// Each test sets up its own HTML fixture; the repeated scaffolding
-// (tmpdir, writeFileSync, lintProject, find assertion) is the standard
-// vitest unit-test shape, not extractable without losing per-test clarity.
 
 import { describe, it, expect, afterEach } from "vitest";
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";

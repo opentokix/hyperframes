@@ -1,7 +1,4 @@
 // fallow-ignore-file complexity
-// Project-level lint helpers fan out per-file rule checks; branching here
-// reflects the variety of file shapes (root HTML, sub-comps, assets), not
-// hidden complexity.
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, extname, isAbsolute, join, posix, relative, resolve } from "node:path";
@@ -308,11 +305,7 @@ function lintAudioSrcNotFound(
 
   const audioSrcRe = /<audio\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
 
-  // Deferred-token contract: the platform's post-finish resolver replaces
-  // placeholders shaped like `<<{kind}_{id}>>` (e.g. `<<tts_xzvv>>`,
-  // `<<music_bg42>>`, `<<audio_6bwj>>`) with real asset URLs after the
-  // composition is shipped. They look like missing files to this lint
-  // pass but are legitimate at author-time, so skip them here.
+  // `<<{kind}_{id}>>` placeholders are resolved post-finish by the platform.
   const deferredTokenRe = /<<(?:tts|audio|music|sfx|sound|narration)_[a-zA-Z0-9]+>>/i;
 
   const missingSrcs: string[] = [];
@@ -321,8 +314,8 @@ function lintAudioSrcNotFound(
     while ((match = audioSrcRe.exec(html)) !== null) {
       const src = match[1]!;
       if (/^(https?:|data:|blob:)/i.test(src)) continue;
-      if (/^__[A-Z_]+__$/.test(src)) continue; // Skip template placeholders
-      if (deferredTokenRe.test(src)) continue; // Skip deferred tokens (resolved post-finish)
+      if (/^__[A-Z_]+__$/.test(src)) continue;
+      if (deferredTokenRe.test(src)) continue;
       // Sub-composition srcs are written relative to the sub-composition file
       // (e.g. "../assets/foo.mp3"); the bundler rewrites them to root-relative
       // before serving. Mirror that rewrite here so the existence check sees

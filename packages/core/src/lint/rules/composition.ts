@@ -1,5 +1,4 @@
 // fallow-ignore-file complexity
-// Lint rules in this file are pattern matchers — branching is inherent.
 
 import type { LintContext, HyperframeLintFinding } from "../context";
 import { findHtmlTag, readAttr, readJsonAttr, truncateSnippet } from "../utils";
@@ -776,12 +775,7 @@ export const compositionRules: Array<(ctx: LintContext) => HyperframeLintFinding
     }
     if (subCompHosts.length < 2) return findings;
 
-    // FP guard: HyperFrames-native scheduling. When every sub-comp host carries
-    // `data-track-index`, the host is positioned by the runtime via its track
-    // (parallel layers) rather than driven by master GSAP. Sub-comps in this
-    // mode are typically static/CSS-only — they don't expect master-tl seeks.
-    // The hollow-master agent bug we want to catch uses sequential timelines
-    // *without* track indexes; that path still fires.
+    // data-track-index hosts are runtime-scheduled; master TL isn't expected to drive them.
     if (subCompHosts.every((h) => h.hasTrackIndex)) return findings;
 
     // Scan scripts for any orchestration of each sub-comp host id "X":
@@ -853,22 +847,13 @@ export const compositionRules: Array<(ctx: LintContext) => HyperframeLintFinding
       if (attrMatch?.[1]) orchestratedIds.add(attrMatch[1]);
     }
 
-    // FP guard: helper-function pattern. Authors sometimes wrap tl.to in a
-    // helper (e.g. `function xfade(outSel, inSel, t) { tl.to(outSel, ...); }`
-    // then `xfade("#beat-1-host", "#beat-2-host", 4.15)`). The tl.to args are
-    // variables, so the regex above misses them — but the `#beat-N-host`
-    // string literals DO appear in the script as helper-call arguments.
-    // For each sub-comp not yet marked orchestrated, check if its
-    // `data-composition-id` OR its wrapper `id=` attribute is mentioned as
-    // a string literal `#<id>` ANYWHERE in the script (helper args, gsap.set
-    // selector arrays, etc.). If yes, consider it orchestrated.
+    // Helper-call form: `xfade("#beat-1-host", ...)` — the host id appears
+    // as a string literal even though tl.to itself takes a variable.
     for (const host of subCompHosts) {
       if (orchestratedIds.has(host.id)) continue;
       const candidateIds = [host.id, host.hostIdAttr].filter(Boolean) as string[];
       for (const idVal of candidateIds) {
         const escapedId = idVal.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
-        // Match `#<id>` followed by a non-id-character (so we don't match
-        // `#beat-1` inside `#beat-12`).
         const refRe = new RegExp(`["'\\s,(\\[]#${escapedId}(?:[^A-Za-z0-9_-]|$)`);
         if (refRe.test(scriptBlob)) {
           orchestratedIds.add(host.id);
