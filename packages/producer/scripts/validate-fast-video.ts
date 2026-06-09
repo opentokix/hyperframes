@@ -23,8 +23,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRenderJob, executeRenderJob } from "../src/index.js";
 
-const COMP = process.env.PRODUCER_VALIDATE_COMP ?? "sub-composition-video";
-const MIN_PSNR = Number.parseFloat(process.env.PRODUCER_VALIDATE_MIN_PSNR ?? "25");
+// `||` not `??` — the workflow passes empty strings on a push trigger (inputs
+// are only populated for workflow_dispatch), and "" must fall through to the default.
+const COMP = process.env.PRODUCER_VALIDATE_COMP || "sub-composition-video";
+const MIN_PSNR = Number.parseFloat(process.env.PRODUCER_VALIDATE_MIN_PSNR || "25");
 const work = mkdtempSync(join(tmpdir(), "fastvideo-"));
 
 process.env.PRODUCER_ENABLE_BROWSER_POOL = "false";
