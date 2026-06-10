@@ -62,6 +62,12 @@ declare global {
       originalRequestAnimationFrame?: typeof window.requestAnimationFrame;
       originalSetTimeout?: typeof window.setTimeout;
     };
+    /**
+     * Set by the engine (evaluateOnNewDocument, before this stub) when fast
+     * capture (drawElementImage) is active. Opt out per render with
+     * HF_FAST_CAPTURE_AUTOALPHA=false.
+     */
+    __HF_FAST_CAPTURE_AUTOALPHA__?: boolean;
   }
 }
 
@@ -158,6 +164,47 @@ function unwrapTimelineArg(arg: unknown): unknown {
   return arg;
 }
 
+/**
+ * Fast-capture autoAlpha rewrite.
+ *
+ * Elements at `opacity: 0` still paint as transparent promoted compositor
+ * layers. Stacked opacity-0 containers (the word-by-word caption pattern)
+ * break drawElementImage capture (blackout / misplaced paint records) and
+ * stall SwiftShader's first BeginFrame. GSAP's `autoAlpha` is the same fade
+ * but additionally sets `visibility: hidden` at 0, removing the element from
+ * the paint tree — measured on the chat CI comp: 29.4 → 49.6 dB
+ * fast-vs-baseline with zero blackout frames.
+ *
+ * When the engine signals fast capture (`__HF_FAST_CAPTURE_AUTOALPHA__`),
+ * rewrite `opacity` → `autoAlpha` in tween vars. Skipped when the author
+ * already manages `autoAlpha` or `visibility` themselves. Baseline renders
+ * never see this — the flag is only set on fast-capture sessions.
+ */
+function convertVarsOpacityToAutoAlpha(vars: unknown): unknown {
+  if (vars === null || typeof vars !== "object" || Array.isArray(vars)) return vars;
+  const record = vars as Record<string, unknown>;
+  if (!("opacity" in record) || "autoAlpha" in record || "visibility" in record) return vars;
+  const converted: Record<string, unknown> = {};
+  for (const key of Object.keys(record)) {
+    if (key === "opacity") converted.autoAlpha = record[key];
+    else converted[key] = record[key];
+  }
+  return converted;
+}
+
+/**
+ * Apply the autoAlpha rewrite to the vars argument(s) of a tween call.
+ * `to`/`from`/`set` carry vars at index 1; `fromTo` at indexes 1 and 2.
+ */
+function convertTweenArgs(method: TimelineOperationMethod, args: unknown[]): unknown[] {
+  if (window.__HF_FAST_CAPTURE_AUTOALPHA__ !== true) return args;
+  if (method === "add") return args;
+  const out = args.slice();
+  if (out.length > 1) out[1] = convertVarsOpacityToAutoAlpha(out[1]);
+  if (method === "fromTo" && out.length > 2) out[2] = convertVarsOpacityToAutoAlpha(out[2]);
+  return out;
+}
+
 function applyTimelineOperation(entry: TimelineOperation): void {
   const real = entry.proxy.__hfReal;
   const fn = real[entry.method];
@@ -172,7 +219,7 @@ function enqueueTimelineOperation(
   method: TimelineOperationMethod,
   args: unknown[],
 ): TimelineProxy {
-  const entry = { proxy, method, args };
+  const entry = { proxy, method, args: convertTweenArgs(method, args) };
   proxy.__hfQueue.push(entry);
   pendingOperations.push(entry);
   scheduleBatch();
@@ -408,6 +455,20 @@ if (typeof window !== "undefined") {
         if (!g || typeof g.timeline !== "function") return;
         const origTimeline = g.timeline.bind(g) as (params?: unknown) => GsapTimeline;
         g.timeline = (params?: unknown): GsapTimeline => wrapTimeline(origTimeline(params));
+        // Fast-capture autoAlpha rewrite for top-level gsap.to/from/set/fromTo
+        // calls (compositions often use `gsap.set(el, { opacity: 0 })` for
+        // initial state — the timeline proxy never sees those).
+        for (const method of ["to", "from", "set"] as const) {
+          const orig = g[method];
+          if (typeof orig !== "function") continue;
+          const bound = (orig as (...a: unknown[]) => unknown).bind(g);
+          g[method] = (...args: unknown[]): unknown => bound(...convertTweenArgs(method, args));
+        }
+        const origFromTo = g.fromTo;
+        if (typeof origFromTo === "function") {
+          const bound = (origFromTo as (...a: unknown[]) => unknown).bind(g);
+          g.fromTo = (...args: unknown[]): unknown => bound(...convertTweenArgs("fromTo", args));
+        }
       },
     });
   } catch {
