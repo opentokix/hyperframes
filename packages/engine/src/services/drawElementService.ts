@@ -270,6 +270,13 @@ export async function captureDrawElementFrame(
                 break;
               }
             }
+            // Opaque (jpeg) output with no author background anywhere:
+            // Page.captureScreenshot composites over the browser's default
+            // white viewport, but a cleared canvas encodes to BLACK in jpeg.
+            // Fill white for parity (transparent comps rendered to an opaque
+            // container — e.g. the webm-transparency test forced to mp4).
+            // png keeps true transparency.
+            if (!bg && fmt === "jpeg") bg = "#fff";
             if (bg) {
               ctx.fillStyle = bg;
               ctx.fillRect(0, 0, w, h);
