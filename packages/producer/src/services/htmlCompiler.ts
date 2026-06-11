@@ -603,30 +603,6 @@ function inlineSubCompositions(
       },
       parseHtml: (htmlStr: string) => parseHTML(htmlStr).document as unknown as Document,
       scriptErrorLabel: "[Compiler] Composition script failed",
-      flattenInnerRoot: (innerRoot: Element): Element => {
-        const prepared = innerRoot.cloneNode(true) as Element;
-        const authoredRootId = prepared.getAttribute("id")?.trim();
-        for (const attr of [
-          "data-composition-id",
-          "data-composition-file",
-          "data-start",
-          "data-duration",
-          "data-end",
-          "data-track-index",
-          "data-track",
-          "data-composition-src",
-          "data-hf-authored-duration",
-          "data-hf-authored-end",
-        ]) {
-          prepared.removeAttribute(attr);
-        }
-        if (authoredRootId) {
-          prepared.removeAttribute("id");
-          prepared.setAttribute("data-hf-authored-id", authoredRootId);
-        }
-        prepared.setAttribute("data-hf-inner-root", "true");
-        return prepared;
-      },
     },
   );
 
