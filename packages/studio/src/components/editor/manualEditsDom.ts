@@ -277,14 +277,34 @@ export function applyStudioPathOffsetDraft(
 
   const isGsapAnimated = gsapAnimatesProperty(element, "x", "y");
   if (isGsapAnimated) {
-    // For GSAP-animated elements: use gsap.set for positioning (the timeline
-    // is paused during drag). Set translate:none explicitly to prevent
-    // double-counting with the transform.
     element.style.setProperty("translate", "none");
     const win = element.ownerDocument.defaultView as
-      | (Window & { gsap?: { set: (el: Element, vars: Record<string, unknown>) => void } })
+      | (Window & {
+          gsap?: {
+            set: (el: Element, vars: Record<string, unknown>) => void;
+            getProperty: (el: Element, prop: string) => number;
+          };
+        })
       | null;
-    win?.gsap?.set(element, { x: offset.x, y: offset.y });
+    if (win?.gsap) {
+      const baseX = Number.parseFloat(element.getAttribute("data-hf-drag-gsap-base-x") ?? "");
+      const baseY = Number.parseFloat(element.getAttribute("data-hf-drag-gsap-base-y") ?? "");
+      const origX = Number.parseFloat(element.getAttribute("data-hf-drag-initial-offset-x") ?? "");
+      const origY = Number.parseFloat(element.getAttribute("data-hf-drag-initial-offset-y") ?? "");
+      const gsapBaseX = Number.isFinite(baseX)
+        ? baseX
+        : (win.gsap.getProperty(element, "x") as number);
+      const gsapBaseY = Number.isFinite(baseY)
+        ? baseY
+        : (win.gsap.getProperty(element, "y") as number);
+      if (!Number.isFinite(baseX))
+        element.setAttribute("data-hf-drag-gsap-base-x", String(gsapBaseX));
+      if (!Number.isFinite(baseY))
+        element.setAttribute("data-hf-drag-gsap-base-y", String(gsapBaseY));
+      const deltaX = offset.x - (Number.isFinite(origX) ? origX : 0);
+      const deltaY = offset.y - (Number.isFinite(origY) ? origY : 0);
+      win.gsap.set(element, { x: gsapBaseX + deltaX, y: gsapBaseY + deltaY });
+    }
   } else {
     // Non-GSAP elements: use CSS translate as before.
     element.style.setProperty(

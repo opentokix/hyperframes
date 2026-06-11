@@ -329,7 +329,11 @@ export function useDomEditSession({
   // GSAP-aware: intercept offset/resize/rotation to commit via script mutation when animated.
   const handleGsapAwarePathOffsetCommit = useCallback(
     async (selection: DomEditSelection, next: { x: number; y: number }) => {
-      if (STUDIO_GSAP_DRAG_INTERCEPT_ENABLED && gsapCommitMutation) {
+      if (
+        STUDIO_GSAP_DRAG_INTERCEPT_ENABLED &&
+        gsapCommitMutation &&
+        usePlayerStore.getState().autoKeyframeEnabled
+      ) {
         const handled = await tryGsapDragIntercept(
           selection,
           next,
@@ -375,7 +379,11 @@ export function useDomEditSession({
 
   const handleGsapAwareBoxSizeCommit = useCallback(
     async (selection: DomEditSelection, next: { width: number; height: number }) => {
-      if (STUDIO_GSAP_DRAG_INTERCEPT_ENABLED && gsapCommitMutation) {
+      if (
+        STUDIO_GSAP_DRAG_INTERCEPT_ENABLED &&
+        gsapCommitMutation &&
+        usePlayerStore.getState().autoKeyframeEnabled
+      ) {
         const handled = await tryGsapResizeIntercept(
           selection,
           next,
@@ -399,7 +407,11 @@ export function useDomEditSession({
 
   const handleGsapAwareRotationCommit = useCallback(
     async (selection: DomEditSelection, next: { angle: number }) => {
-      if (STUDIO_GSAP_DRAG_INTERCEPT_ENABLED && gsapCommitMutation) {
+      if (
+        STUDIO_GSAP_DRAG_INTERCEPT_ENABLED &&
+        gsapCommitMutation &&
+        usePlayerStore.getState().autoKeyframeEnabled
+      ) {
         const handled = await tryGsapRotationIntercept(
           selection,
           next.angle,

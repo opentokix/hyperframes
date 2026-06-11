@@ -183,6 +183,22 @@ export function restoreStudioPathOffset(
     STUDIO_ORIGINAL_INLINE_TRANSLATE_ATTR,
     previous.originalInlineTranslate,
   );
+
+  // Restore GSAP x/y if a draft was applied via gsap.set during drag
+  const baseX = element.getAttribute("data-hf-drag-gsap-base-x");
+  const baseY = element.getAttribute("data-hf-drag-gsap-base-y");
+  if (baseX != null || baseY != null) {
+    const win = element.ownerDocument.defaultView as
+      | (Window & { gsap?: { set: (el: Element, vars: Record<string, unknown>) => void } })
+      | null;
+    if (win?.gsap) {
+      const x = Number.parseFloat(baseX ?? "0") || 0;
+      const y = Number.parseFloat(baseY ?? "0") || 0;
+      win.gsap.set(element, { x, y });
+    }
+    element.removeAttribute("data-hf-drag-gsap-base-x");
+    element.removeAttribute("data-hf-drag-gsap-base-y");
+  }
 }
 
 /* ── Clear functions ──────────────────────────────────────────────── */

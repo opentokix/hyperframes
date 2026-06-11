@@ -11,8 +11,6 @@ import {
   resolveTweenStart,
   resolveTweenDuration,
 } from "../utils/globalTimeCompiler";
-import { readAllAnimatedProperties } from "./gsapRuntimeReaders";
-
 export interface GsapDragCommitCallbacks {
   commitMutation: (
     selection: DomEditSelection,
@@ -114,7 +112,6 @@ async function extendTweenAndAddKeyframe(
   const newStart = Math.min(targetTime, tweenStart);
   const newEnd = Math.max(targetTime, tweenEnd);
   const newDuration = Math.max(0.01, newEnd - newStart);
-
   const existingKfs = anim.keyframes?.keyframes ?? [];
   const remappedKfs: Array<{ percentage: number; properties: Record<string, number | string> }> =
     [];
@@ -126,20 +123,15 @@ async function extendTweenAndAddKeyframe(
 
   const targetPct = Math.round(((targetTime - newStart) / newDuration) * 1000) / 10;
   remappedKfs.push({ percentage: targetPct, properties });
+
   remappedKfs.sort((a, b) => a.percentage - b.percentage);
 
   await callbacks.commitMutation(
     selection,
-    { type: "delete", animationId: anim.id },
-    { label: "Extend tween range", skipReload: true },
-  );
-
-  const selector = anim.targetSelector;
-  await callbacks.commitMutation(
-    selection,
     {
-      type: "add-with-keyframes",
-      targetSelector: selector,
+      type: "replace-with-keyframes",
+      animationId: anim.id,
+      targetSelector: anim.targetSelector,
       position: Math.round(newStart * 1000) / 1000,
       duration: Math.round(newDuration * 1000) / 1000,
       keyframes: remappedKfs,
@@ -156,8 +148,9 @@ async function commitKeyframedPosition(
   callbacks: GsapDragCommitCallbacks,
   beforeReload?: () => void,
 ): Promise<void> {
-  const pct = computeCurrentPercentage(selection, anim);
-
+  const { activeKeyframePct, setActiveKeyframePct } = usePlayerStore.getState();
+  const pct = activeKeyframePct ?? computeCurrentPercentage(selection, anim);
+  if (activeKeyframePct != null) setActiveKeyframePct(null);
   await callbacks.commitMutation(
     selection,
     {
@@ -182,10 +175,11 @@ async function commitFlatViaKeyframes(
   callbacks: GsapDragCommitCallbacks,
   beforeReload?: () => void,
 ): Promise<void> {
+  const coalesceKey = `gsap:convert-drag:${anim.id}`;
   await callbacks.commitMutation(
     selection,
     { type: "convert-to-keyframes", animationId: anim.id },
-    { label: "Convert to keyframes for drag", skipReload: true },
+    { label: "Convert to keyframes for drag", skipReload: true, coalesceKey },
   );
 
   const pct = computeCurrentPercentage(selection, anim);
@@ -198,7 +192,7 @@ async function commitFlatViaKeyframes(
       percentage: pct,
       properties,
     },
-    { label: `Move layer (keyframe ${pct}%)`, softReload: true, beforeReload },
+    { label: `Move layer (keyframe ${pct}%)`, softReload: true, beforeReload, coalesceKey },
   );
 }
 
@@ -243,19 +237,20 @@ export async function commitGsapPositionFromDrag(
     el.removeAttribute("data-hf-drag-initial-offset-y");
   };
 
+  const ct = usePlayerStore.getState().currentTime;
   if (anim.keyframes) {
     const newId = await materializeIfDynamic(anim, iframe, callbacks.commitMutation, selection);
     const effectiveAnim = newId ? { ...anim, id: newId } : anim;
-    const runtimeProps = readAllAnimatedProperties(iframe, selector, anim);
+    const dragProps: Record<string, number> = { x: newX, y: newY };
 
-    const ct = usePlayerStore.getState().currentTime;
     const ts = resolveTweenStart(effectiveAnim);
     const td = resolveTweenDuration(effectiveAnim);
-    if (ts !== null && td > 0 && (ct < ts - 0.01 || ct > ts + td + 0.01)) {
+    const outsideRange = ts !== null && td > 0 && (ct < ts - 0.01 || ct > ts + td + 0.01);
+    if (outsideRange) {
       await extendTweenAndAddKeyframe(
         selection,
         effectiveAnim,
-        { ...runtimeProps, x: newX, y: newY },
+        dragProps,
         ct,
         ts,
         td,
@@ -263,32 +258,90 @@ export async function commitGsapPositionFromDrag(
         restoreOffset,
       );
     } else {
-      await commitKeyframedPosition(
-        selection,
-        effectiveAnim,
-        { ...runtimeProps, x: newX, y: newY },
-        callbacks,
-        restoreOffset,
-      );
+      await commitKeyframedPosition(selection, effectiveAnim, dragProps, callbacks, restoreOffset);
     }
   } else if (anim.method === "from" || anim.method === "fromTo") {
-    await callbacks.commitMutation(
-      selection,
-      {
-        type: "convert-to-keyframes",
-        animationId: anim.id,
-        resolvedFromValues: { x: newX, y: newY },
-      },
-      { label: "Move layer (keyframe rest)", softReload: true, beforeReload: restoreOffset },
-    );
+    const ct = usePlayerStore.getState().currentTime;
+    const ts = resolveTweenStart(anim);
+    const td = resolveTweenDuration(anim);
+    const outsideRange = ts !== null && td > 0 && (ct < ts - 0.01 || ct > ts + td + 0.01);
+    const dragProps: Record<string, number> = { x: newX, y: newY };
+
+    if (outsideRange && ts !== null) {
+      // Split the original from() tween into property groups first, then
+      // create a new position-group tween for the drag. This avoids creating
+      // a mixed tween that bundles scale/transformOrigin with x/y.
+      await callbacks.commitMutation(
+        selection,
+        { type: "split-into-property-groups", animationId: anim.id },
+        { label: "Split from() for drag", skipReload: true },
+      );
+
+      // Build position-only keyframes for the drag
+      const newStart = Math.min(ct, ts);
+      const newEnd = Math.max(ct, ts + td);
+      const newDuration = Math.max(0.01, newEnd - newStart);
+      const dragBefore = ct < ts;
+      const origStartPct = Math.round(((ts - newStart) / newDuration) * 1000) / 10;
+      const origEndPct = Math.round(((ts + td - newStart) / newDuration) * 1000) / 10;
+
+      const keyframes: Array<{ percentage: number; properties: Record<string, number | string> }> =
+        [];
+      if (dragBefore) {
+        keyframes.push({ percentage: 0, properties: { x: newX, y: newY } });
+        if (origStartPct > 0.5 && origStartPct < 99.5) {
+          keyframes.push({ percentage: origStartPct, properties: { x: 0, y: 0 } });
+        }
+        keyframes.push({ percentage: 100, properties: { x: 0, y: 0 } });
+      } else {
+        keyframes.push({ percentage: 0, properties: { x: 0, y: 0 } });
+        if (origEndPct > 0.5 && origEndPct < 99.5) {
+          keyframes.push({ percentage: origEndPct, properties: { x: 0, y: 0 } });
+        }
+        keyframes.push({ percentage: 100, properties: { x: newX, y: newY } });
+      }
+      keyframes.sort((a, b) => a.percentage - b.percentage);
+
+      await callbacks.commitMutation(
+        selection,
+        {
+          type: "add-with-keyframes",
+          targetSelector: anim.targetSelector,
+          position: Math.round(newStart * 1000) / 1000,
+          duration: Math.round(newDuration * 1000) / 1000,
+          keyframes,
+        },
+        { label: "Move layer (from extended)", softReload: true, beforeReload: restoreOffset },
+      );
+    } else {
+      // Inside tween range: convert then add keyframe at current time
+      const coalesceKey = `gsap:convert-drag:${anim.id}`;
+      await callbacks.commitMutation(
+        selection,
+        {
+          type: "convert-to-keyframes",
+          animationId: anim.id,
+        },
+        { label: "Convert from() for drag", skipReload: true, coalesceKey },
+      );
+      const pct = computeCurrentPercentage(selection, anim);
+      await callbacks.commitMutation(
+        selection,
+        {
+          type: "add-keyframe",
+          animationId: anim.id,
+          percentage: pct,
+          properties: dragProps,
+        },
+        {
+          label: `Move layer (keyframe ${pct}%)`,
+          softReload: true,
+          beforeReload: restoreOffset,
+          coalesceKey,
+        },
+      );
+    }
   } else {
-    const runtimeProps = readAllAnimatedProperties(iframe, selector, anim);
-    await commitFlatViaKeyframes(
-      selection,
-      anim,
-      { ...runtimeProps, x: newX, y: newY },
-      callbacks,
-      restoreOffset,
-    );
+    await commitFlatViaKeyframes(selection, anim, { x: newX, y: newY }, callbacks, restoreOffset);
   }
 }

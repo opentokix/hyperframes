@@ -43,6 +43,9 @@ export function useGestureCommit({
   const recordingAutoStopRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const recordingStartTimeRef = useRef(0);
   const commitInFlightRef = useRef(false);
+  // Capture selection at recording start so commit always targets the recorded element,
+  // even if the user's selection changes mid-recording.
+  const capturedSelectionRef = useRef<DomEditSelection | null>(null);
 
   // Unmount: clear auto-stop interval
   useEffect(() => () => clearInterval(recordingAutoStopRef.current), []);
@@ -59,7 +62,7 @@ export function useGestureCommit({
     store.setIsPlaying(false);
     try {
       const liveSession = domEditSessionRef.current;
-      const sel = liveSession.domEditSelection;
+      const sel = capturedSelectionRef.current;
       if (!sel) {
         if (frozenSamples.length > 2) {
           showToast("Selection lost during recording", "error");
@@ -77,7 +80,13 @@ export function useGestureCommit({
         return;
       }
 
-      const simplified = simplifyGestureSamples(frozenSamples, duration, 5);
+      // Per-property epsilon: small-range properties (opacity 0–1, scale ~0.01–10)
+      // need a much tighter tolerance than positional properties (x/y in px).
+      const simplified = simplifyGestureSamples(frozenSamples, duration, (key) => {
+        if (key === "opacity") return 0.01;
+        if (key === "scale" || key === "scaleX" || key === "scaleY") return 0.01;
+        return 5;
+      });
       const sortedPcts = Array.from(simplified.keys()).sort((a, b) => a - b);
 
       // Ensure a 0% keyframe exists with the element's start-of-recording position
@@ -139,6 +148,7 @@ export function useGestureCommit({
     const elStart = Number.parseFloat(sel.dataAttributes?.start ?? "0") || 0;
     const elDur = Number.parseFloat(sel.dataAttributes?.duration ?? "0") || 0;
     const elementEnd = elDur > 0 ? elStart + elDur : undefined;
+    capturedSelectionRef.current = sel;
     gestureRecording.startRecording(sel.element, iframe, elementEnd);
     gestureStateRef.current = "recording";
     isGestureRecordingRef.current = true;

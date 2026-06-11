@@ -51,6 +51,7 @@ function ensureElementAddressable(selection: DomEditSelection): {
 
 interface MutationResult {
   ok: boolean;
+  changed?: boolean;
   parsed?: ParsedGsap;
   before?: string;
   after?: string;
@@ -133,7 +134,15 @@ export function useGsapScriptCommits({
       const targetPath = selection.sourceFile || activeCompPath || "index.html";
 
       const result = await mutateGsapScript(pid, targetPath, mutation);
-      if (!result?.ok) return;
+      if (!result) {
+        if (options.skipReload) return;
+        throw new Error(`Mutation failed: ${mutation.type}`);
+      }
+
+      if (result.changed === false) {
+        if (options.skipReload) return;
+        return;
+      }
 
       domEditSaveTimestampRef.current = Date.now();
 
@@ -441,7 +450,9 @@ export function useGsapScriptCommits({
         apply: () => {
           const prev = readKeyframeSnapshot(sf, elementId);
           if (prev) {
-            const newKeyframes = prev.keyframes.filter((kf) => kf.percentage !== percentage);
+            const newKeyframes = prev.keyframes.filter(
+              (kf) => Math.abs((kf.tweenPercentage ?? kf.percentage) - percentage) > 0.2,
+            );
             writeKeyframeCache(sf, elementId, { ...prev, keyframes: newKeyframes });
           }
           return prev;
