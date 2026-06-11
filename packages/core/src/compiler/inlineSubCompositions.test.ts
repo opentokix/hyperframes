@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseHTML } from "linkedom";
 import { inlineSubCompositions } from "./inlineSubCompositions";
+import { prepareFlattenedInnerRoot } from "./htmlBundler";
 
 // Fixtures reference GSAP CDN but are never loaded in a real browser — resolveHtml is mocked.
 
@@ -101,24 +102,10 @@ describe("inlineSubCompositions – #ID selector scoping divergence", () => {
     const document = makeHostDocument("intro");
     const host = document.querySelector('[data-composition-src="intro.html"]')!;
 
-    // Simulate the bundler's flattenInnerRoot: clone the element, add
-    // data-hf-authored-id, strip timing attrs (simplified here).
-    function flattenInnerRoot(innerRoot: Element): Element {
-      const clone = innerRoot.cloneNode(true) as Element;
-      const authoredId = clone.getAttribute("id");
-      if (authoredId) {
-        clone.setAttribute("data-hf-authored-id", authoredId);
-        clone.removeAttribute("id");
-      }
-      clone.removeAttribute("data-start");
-      clone.removeAttribute("data-duration");
-      return clone;
-    }
-
     const result = inlineSubCompositions(document, [host], {
       resolveHtml: () => SUB_COMP_HTML,
       parseHtml: (html) => parseHTML(html).document,
-      flattenInnerRoot,
+      flattenInnerRoot: prepareFlattenedInnerRoot,
     });
 
     // With flattenInnerRoot, the inner root is preserved as a child of the
@@ -236,26 +223,21 @@ describe("inlineSubCompositions – #ID selector scoping divergence", () => {
 </body></html>`);
     const host = document.querySelector('[data-composition-src="scene_1.html"]')!;
 
-    function flattenInnerRoot(innerRoot: Element): Element {
-      const clone = innerRoot.cloneNode(true) as Element;
-      const authoredId = clone.getAttribute("id");
-      if (authoredId) {
-        clone.setAttribute("data-hf-authored-id", authoredId);
-        clone.removeAttribute("id");
-      }
-      clone.setAttribute("data-hf-inner-root", "true");
-      return clone;
-    }
-
-    inlineSubCompositions(document, [host], {
+    const result = inlineSubCompositions(document, [host], {
       resolveHtml: () => subCompWithClass,
       parseHtml: (html) => parseHTML(html).document,
-      flattenInnerRoot,
+      flattenInnerRoot: prepareFlattenedInnerRoot,
     });
 
     const innerRoot = host.querySelector(".scene_1-root");
     expect(innerRoot).not.toBeNull();
     expect(innerRoot!.querySelector(".s1-board")).not.toBeNull();
+
+    // Scoped CSS should use descendant selectors (not compound) since the
+    // inner root is a child of the host, not merged onto it.
+    const scopedCss = result.styles.join("\n");
+    expect(scopedCss).toContain("[data-composition-id=");
+    expect(scopedCss).toContain(".scene_1-root");
   });
 
   it("without flattenInnerRoot, inner root class is lost (pre-fix producer behavior)", () => {

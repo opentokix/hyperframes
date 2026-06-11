@@ -606,16 +606,12 @@ function inlineSubCompositions(
       },
       parseHtml: (htmlStr: string) => parseHTML(htmlStr).document as unknown as Document,
       scriptErrorLabel: "[Compiler] Composition script failed",
-      compoundAuthoredRoot: true,
       flattenInnerRoot: prepareFlattenedInnerRoot as (el: Element) => Element,
     },
   );
 
-  // Set data-hf-authored-id on host elements so the scoped script proxy
+  // Ensure every host has data-hf-authored-id so scoped script proxies
   // can rewrite #id selectors (e.g. #us-map → [data-hf-authored-id="us-map"]).
-  // Unlike flattenInnerRoot (which changes DOM structure and breaks baselines),
-  // this preserves the existing innerHTML-based inlining while enabling the
-  // authored-id selector contract.
   for (const hostEl of hosts) {
     const compId = hostEl.getAttribute("data-composition-id");
     if (compId && !hostEl.getAttribute("data-hf-authored-id")) {
