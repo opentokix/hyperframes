@@ -140,6 +140,17 @@ let publishCheckScheduled = false;
  */
 const autoAlphaRewrittenTargets = new Set<unknown>();
 
+/**
+ * Tween targets animated with 3D transform vars (rotationX / rotationY /
+ * transformPerspective). drawElementImage cannot paint 3D transforms — the
+ * engine's threeDProjection module re-projects these elements via WebGL and
+ * reads this list at init to find targets whose transform is still flat at
+ * t=0 (to()-style tweens never show up in a computed-style scan). Exposed as
+ * window.__hf3dTweenTargets. rotationZ/rotation stay 2D and are not
+ * recorded; a bare `z` without perspective has no visual effect.
+ */
+const threeDTweenTargets = new Set<unknown>();
+
 function requestBatchFrame(callback: FrameRequestCallback): number {
   const originalRequestAnimationFrame = window.__HF_VIRTUAL_TIME__?.originalRequestAnimationFrame;
   if (typeof originalRequestAnimationFrame === "function") {
@@ -223,7 +234,36 @@ function convertTweenArgs(method: TimelineOperationMethod, args: unknown[]): unk
   if (rewritten && out[0] !== null && out[0] !== undefined) {
     autoAlphaRewrittenTargets.add(out[0]);
   }
+  recordThreeDTweenTarget(out);
   return out;
+}
+
+function varsHasThreeD(vars: unknown): boolean {
+  if (vars === null || typeof vars !== "object" || Array.isArray(vars)) return false;
+  const record = vars as Record<string, unknown>;
+  return "rotationX" in record || "rotationY" in record || "transformPerspective" in record;
+}
+
+/** Every tween target, regardless of vars — the 3D projection's quad
+ * textures are rasterized once at init, so any GSAP-animated element inside
+ * a quad's subtree makes that quad unprojectable (the engine falls back). */
+const allTweenTargets = new Set<unknown>();
+
+function recordThreeDTweenTarget(args: unknown[]): void {
+  const target = args[0];
+  if (target === null || target === undefined) return;
+  const w = window as Window & {
+    __hf3dTweenTargets?: unknown[];
+    __hfAllTweenTargets?: unknown[];
+  };
+  if (!allTweenTargets.has(target)) {
+    allTweenTargets.add(target);
+    w.__hfAllTweenTargets = Array.from(allTweenTargets);
+  }
+  if (varsHasThreeD(args[1]) || varsHasThreeD(args[2])) {
+    threeDTweenTargets.add(target);
+    w.__hf3dTweenTargets = Array.from(threeDTweenTargets);
+  }
 }
 
 /** Resolve a GSAP tween target (selector / Element / NodeList / array) to elements. */

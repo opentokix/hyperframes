@@ -36,6 +36,7 @@ import {
   resolveDrawElementCaptureMode,
   instrumentAcceleratedCanvases,
 } from "./drawElementService.js";
+import { initThreeDProjection } from "./threeDProjection.js";
 import { DEFAULT_CONFIG, type EngineConfig } from "../config.js";
 import type {
   CaptureOptions,
@@ -408,6 +409,28 @@ async function initDrawElementOrTransparentBackground(
         await initTransparentBackground(session.page);
       }
     } else {
+      // Rewrite CSS 3D contexts into WebGL-projected canvases BEFORE the
+      // layoutsubtree canvas goes in (rects are measured in normal layout).
+      // drawElementImage cannot paint 3D rendering contexts — see
+      // threeDProjection.ts. No-op for compositions without 3D content.
+      const threeD = await initThreeDProjection(page);
+      if (!threeD.ok) {
+        console.log(
+          `[engine] fast capture: falling back to ${session.launchCaptureMode} capture — ` +
+            `3D projection init failed (${threeD.reason ?? "unknown"})`,
+        );
+        session.captureMode = session.launchCaptureMode;
+        if (transparent) {
+          await initTransparentBackground(session.page);
+        }
+        return;
+      }
+      if (threeD.groups > 0) {
+        logInitPhase(
+          `3D projection active: ${threeD.groups} context(s), ${threeD.quads} quad(s), ` +
+            `${threeD.selfQuads ?? 0} self-quad el(s), ${threeD.stubTargets ?? 0} stub target(s)`,
+        );
+      }
       await injectDrawElementCanvas(page, session.options.width, session.options.height);
       if (transparent) {
         await initTransparentBackground(session.page);

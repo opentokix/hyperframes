@@ -230,8 +230,14 @@ export async function captureDrawElementFrame(
       type AccelWindow = Window & {
         __hf_accel_canvases?: HTMLCanvasElement[];
         __hf_canvas_2d?: HTMLCanvasElement[];
+        __hf3d?: { update: () => void };
       };
       const aw = window as AccelWindow;
+      // Re-project CSS 3D contexts for THIS frame (threeDProjection.ts) so
+      // their WebGL canvases are fresh before being drawImage-composited
+      // below. Must run before the paint wait for the same reason as the
+      // canvas hiding: the awaited paint should reflect the final state.
+      aw.__hf3d?.update();
       const accel = (aw.__hf_accel_canvases ?? []).filter((c) => root.contains(c));
       // Under BeginFrame pacing (sync=false) 2d canvas bitmaps also freeze in
       // the paint records — composite them the same way. On paint-synced hosts
@@ -290,6 +296,7 @@ export async function captureDrawElementFrame(
             // inside the canvas for GPU comps.
             const rootRect = root.getBoundingClientRect();
             for (const c of accel) {
+              if (c.hasAttribute("data-hf-3d")) continue;
               const r = c.getBoundingClientRect();
               try {
                 ctx.drawImage(c, r.left - rootRect.left, r.top - rootRect.top, r.width, r.height);
@@ -300,6 +307,19 @@ export async function captureDrawElementFrame(
             (
               ctx as unknown as { drawElementImage(el: Element, x: number, y: number): void }
             ).drawElementImage(root, 0, 0);
+            // 3D-projection canvases (threeDProjection.ts) composite OVER the
+            // DOM paint: their content replaces clip-path-hidden foreground
+            // elements, and the under-pass above would bury them beneath the
+            // composition root's own background.
+            for (const c of accel) {
+              if (!c.hasAttribute("data-hf-3d")) continue;
+              const r = c.getBoundingClientRect();
+              try {
+                ctx.drawImage(c, r.left - rootRect.left, r.top - rootRect.top, r.width, r.height);
+              } catch {
+                // Zero-sized canvas — skip this frame.
+              }
+            }
           } catch (e) {
             rejectCapture(e instanceof Error ? e : new Error(String(e)));
             return;
