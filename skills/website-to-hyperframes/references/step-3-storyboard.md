@@ -198,36 +198,36 @@ Apple keynote register — economy of words, silence between sentences is a feat
 **Global guardrails** — read [video-composition.md](../../hyperframes/references/video-composition.md) first. It defines the medium rules: density, color presence, scale, frame composition, and how design.md is brand truth not layout spec. Then apply these capture-specific additions:
 
 - Captured assets and composed visuals are both load-bearing — the agent decides per beat which to use, and most beats correlate both. See the Asset & Brand Floor section below for the required floor (brand mark + signature visual) and the variation principle (don't repeat the same content-source pattern across beats).
-- Use different techniques from techniques.md — not across the whole video, per beat. Don't default to basic fade/scale/opacity. The HyperFrames toolkit (read [`techniques.md`](../../hyperframes/references/techniques.md) and [`capabilities.md`](capabilities.md) for the full catalog) — equal-weight options the agent picks from per beat:
+- Use different techniques from techniques.md — not across the whole video, per beat. Don't default to basic fade/scale/opacity. The HyperFrames toolkit (read [`techniques.md`](../../hyperframes/references/techniques.md) and [`capabilities.md`](capabilities.md) for the full catalog) — **equal-weight options**; categories below are navigation, not priority. The agent picks per beat based on what the beat's concept needs, varying across the reel.
 
-  **Content-carrying (brand-true) techniques:**
-  - **SVG path drawing** — logo / diagram / icon draws itself stroke-by-stroke (stroke-dashoffset). Best for brand-mark reveals, connector lines, hand-drawn-feel openers.
-  - **HTML-in-Canvas (`drawElementImage`)** — live HTML/CSS captured as a GPU texture at 60fps. Powers iPhone/MacBook mockups with REAL captured screens inside (`vfx-iphone-device` block), liquid glass refraction over UI (`vfx-liquid-glass`), shatter, portal reveal, magnetic distortion.
-  - **Video compositing** — REAL captured `<video>` clips played inline, masked, overlaid (capture downloads `<video src>` sources to `assets/`). Use when the brand's actual moving product footage exists.
-  - **Lottie animation** — captured or external `.lottie` / `.json` plays as overlay/background. Many sites ship Lottie files; use them rather than recreating their motion in CSS.
-  - **Three.js custom scenes** — full 3D when registry VFX blocks aren't enough (rotating product, sphere, orbit, particle field). More setup than the VFX blocks; only when needed.
+  **Uses captured brand assets** (alphabetical):
+  - **HTML-in-Canvas (`drawElementImage`)** — live HTML/CSS captured as a GPU texture at 60fps. Powers VFX blocks `vfx-iphone-device` (iPhone/MacBook with real captured screens), `vfx-liquid-glass`, `vfx-shatter`, `vfx-portal`, `vfx-magnetic`.
+  - **Lottie animation** — captured or external `.lottie` / `.json` plays as overlay/background. Many sites ship Lottie files in their assets.
+  - **SVG path drawing** — logo / diagram / icon draws itself stroke-by-stroke via `stroke-dashoffset`. Works on captured brand SVG paths or hand-authored.
+  - **Three.js custom scenes** — full 3D when registry VFX blocks aren't enough (rotating product, sphere, orbit, particle field). Has GPU init cost.
+  - **Video compositing** — captured `<video>` clips played inline, masked, overlaid. `capture` downloads `<video src>` sources to `assets/` for direct use.
 
-  **Composed motion + typography:**
-  - **Per-word kinetic typography** — text animates word-by-word with stagger timing (see [`text-effects.md`](../../hyperframes/references/text-effects.md) catalog of 24 named effects: soft-blur-in, mask-reveal-up, kinetic-center-build, shared-axis, line-by-line-slide, etc.).
-  - **Variable font axis animation** — weight / width / slant / optical-size morph over time (premium typography, wordmark reveals).
-  - **Character-by-character typing** — terminal lines, search bars, code blocks (steps() easing for discrete reveals).
+  **Built from primitives (CSS / SVG / Canvas / GSAP)** (alphabetical):
+  - **Camera moves** — push-in (dolly), pull-back, parallax pan, orbit, rack focus, `leading-line-camera-traversal` (world canvas larger than viewport, camera pans across). See "Named motion patterns" further below.
+  - **Character-by-character typing** — terminal lines, search bars, code blocks (`steps()` easing for discrete reveals).
+  - **Clip-path reveal masks** — content slides through a fixed window (image wipes, headline reveals).
   - **Counter animations** — discrete `tl.set(el, {textContent})` at timestamps (numbers ramping, stats).
   - **CSS 3D transforms** — card flips, perspective grids, folding panels.
-  - **Clip-path reveal masks** — content slides through a fixed window (image wipes, headline reveals).
-  - **Camera moves** — push-in (dolly), pull-back, parallax pan, orbit, rack focus, `leading-line-camera-traversal` (world canvas larger than viewport, camera pans across following hand-drawn lines). See "Named motion patterns" further below.
-  - **GSAP MotionPathPlugin** — element follows an SVG `<path d="…"/>` curve through space (orbital motion, spirals, complex entrances — see `bezier-motion-path` motion pattern below).
-  - **Velocity-matched transitions** — outgoing blur/translate matches incoming for seamless beat handoffs (see `whip-pan` + `match-cut-handoff` motion patterns).
-  - **Drifters** — looping background elements (floating particles, slow gradient orbs, ambient marks) at independent intervals for continuous depth behind primary content.
+  - **CSS scene transitions** — 30+ named patterns between beats: push, scale, dissolve, blur, 3D flip, light-leak, distortion, grid, mechanical, destruction. See [transitions.md](../../hyperframes/references/transitions.md) for the full catalog.
+  - **Drifters** — looping background elements (floating particles, slow gradient orbs, ambient marks) at independent intervals for continuous depth.
+  - **GSAP MotionPathPlugin** — element follows an SVG `<path d="…"/>` curve through space. See `bezier-motion-path` named motion pattern below.
+  - **Per-word kinetic typography** — text animates word-by-word with stagger timing. See [text-effects.md](../../hyperframes/references/text-effects.md) for 24 named effects (soft-blur-in, mask-reveal-up, kinetic-center-build, shared-axis, line-by-line-slide, etc.).
+  - **Variable font axis animation** — weight / width / slant / optical-size morph over time.
+  - **Velocity-matched transitions** — outgoing blur/translate matches incoming for seamless beat handoffs. See `whip-pan` + `match-cut-handoff` named motion patterns below.
 
-  **Audio-driven (when music or VO is present):**
-  - **Audio-reactive animation** — bass / mid / treble → scale / glow / shape via `<hf-audio-reactive>`. Highest payoff in music-led / no-VO videos.
+  **Audio-paired (uses VO or music track as input)**:
+  - **Audio-reactive animation** — bass / mid / treble bands map to scale / glow / shape via `<hf-audio-reactive>`. Requires a VO or music track on the timeline.
 
-  **GPU effects (powerful, optional, rare):**
-  - **Shader transitions** — WebGL effects between beats (chromatic, domain-warp, light-leak, swirl, etc.). Max 1-2 per video; **zero is fine and common**. Use only on truly hero "wow" beat boundaries.
-  - **WebGL Fragment Shader Art** — full GPU generative backgrounds (FBM domain warp, cosine palettes). Atmospheric hero scenes; not most beats.
-  - **30+ CSS scene transitions** — named patterns (push, scale, dissolve, blur, 3D flip, light-leak, distortion, grid, mechanical, destruction) lighter than shader transitions but more personality than crossfade.
+  **Has GPU init cost**:
+  - **Shader transitions** — WebGL effects between beats (chromatic, domain-warp, flash-through-white, glitch, light-leak, swirl, thermal, whip, etc.). Hard cap: max 1-2 per video — beyond that, GPU init time + impact dilution outweigh the benefit.
+  - **WebGL Fragment Shader Art** — full GPU generative backgrounds (FBM domain warp, cosine palettes, ridged multifractals).
 
-  Each beat should feel like its own visual world; vary the technique across beats (per the variation principle below). Pick from the catalog above based on what THIS beat's concept needs.
+  Each beat should feel like its own visual world; vary the technique across beats (per the variation principle below). The categories above describe what each technique IS, not which to prefer — pick based on what THIS beat's concept needs.
 
 **Music direction details** (only if Step 2 Q5 said yes):
 
@@ -254,11 +254,11 @@ npx tsx packages/cli/src/cli.ts catalog --type block 2>/dev/null | head -40
 
 If you need a VFX block (e.g. for an iPhone/MacBook mockup hero, a liquid-glass refraction, a portal reveal) install it with `npx tsx packages/cli/src/cli.ts add <name>` — these are powerful for specific hero treatments. Don't over-install: only add blocks you'll actually use in a specific beat. Most videos ship without any registry-installed blocks at all; the core techniques (SVG path drawing, kinetic typography, CSS 3D, canvas procedural art, camera moves, captured-asset use) carry the majority of beats.
 
-**Shader transitions are optional and rare.** Most videos ship without any shader transitions — CSS crossfades and hard cuts (both free, deterministic, GPU-cheap) cover 90%+ of inter-beat transitions cleanly. Reach for a shader transition only when a beat boundary is a true "wow" moment that earns the production-value bump. When you do use one, the available shader names from `registry/blocks/` follow a naming pattern: the block name (`domain-warp-dissolve`) differs from the runtime shader name (`domain-warp`, no `-dissolve` suffix). After installing a block, open its showcase HTML to find the actual shader name used in `HyperShader.init()`, then delete the showcase file (demo-only, pollutes `compositions/` with lint warnings).
+**Shader transition naming.** When you use a shader transition, the available shader names from `registry/blocks/` follow a naming pattern: the block name (`domain-warp-dissolve`) differs from the runtime shader name (`domain-warp`, no `-dissolve` suffix). After installing a block, open its showcase HTML to find the actual shader name used in `HyperShader.init()`, then delete the showcase file (demo-only, pollutes `compositions/` with lint warnings). Technical cap: max 1-2 shader transitions per video — beyond that, GPU init time + impact dilution outweigh the benefit.
 
-#### Canonical declaration format (auto-derived by `w2h-prep` — only if you actually use shader transitions)
+#### Canonical declaration format (auto-derived by `w2h-prep`)
 
-If — and only if — the video genuinely needs one or two shader transitions, declare them in a dedicated section of STORYBOARD.md so `w2h-prep` can emit them in `group_spec.json` automatically. **Most videos skip this section entirely.** Use this exact bullet format (case-insensitive on the shader name; `duration` is optional, defaults to `0.5`):
+When the video has one or two shader transitions, declare them in a dedicated section of STORYBOARD.md so `w2h-prep` can emit them in `group_spec.json` automatically. Skip this section when the video uses none. Use this exact bullet format (case-insensitive on the shader name; `duration` is optional, defaults to `0.5`):
 
 ```markdown
 ## Shader Transitions
@@ -271,7 +271,7 @@ Rules:
 - **Beat ids must match `compositions/beat-N-<slug>.html` filenames** (drop the `.html`).
 - **Declare only the boundaries with a shader** — `w2h-prep` fills the remaining adjacent beat pairs with vanilla CSS crossfades (no `shader` field).
 - **Maximum 2 shader transitions per video** — keep them load-bearing (hero reveal, CTA punch). More than 2 flattens their impact and the engine starts struggling at GPU init.
-- If you don't declare a `## Shader Transitions` section, `w2h-prep` omits the `shader_transitions` field entirely and `assemble-index.mjs` falls through to a vanilla GSAP timeline (no HyperShader). That's the safe default — most videos don't need shader transitions.
+- If you don't declare a `## Shader Transitions` section, `w2h-prep` omits the `shader_transitions` field entirely and `assemble-index.mjs` falls through to a vanilla GSAP timeline (no HyperShader). Use this when the video doesn't have shader transitions.
 
 ### HTML-in-Canvas — plan for it here, build in Step 5
 
@@ -388,13 +388,13 @@ Each beat is a WORLD, not a layout. Write what the viewer EXPERIENCES before you
 - **Organic:** FLOATS, DRIFTS, BREATHES, PULSES, ORBITS
 - **Mechanical:** TYPES ON, CLICKS, LOCKS IN, SNAPS, STEPS
 
-**Transition decision matrix** — pick per beat-boundary:
+**Transition decision matrix** — three options per beat-boundary, equal weight, pick what the boundary calls for:
 
-| CSS crossfade (the default) | Hard cut | Shader transition (rare — opt-in only) |
+| CSS crossfade | Hard cut | Shader transition |
 |---|---|---|
-| Continuous motion between beats, editorial pacing. Cheap, GPU-light, deterministic. | Rapid-fire lists, percussive edits, comedy timing. Free, instant. | Hero reveals, logo unveils, "wow" moments. Max 1-2 per video; **zero is fine and common**. More than 2 flattens their impact + raises GPU init risk. |
+| Continuous motion between beats, editorial pacing. CSS-only, no GPU init. | Rapid-fire lists, percussive edits, comedy timing. Instant, no transition rendered. | Hero reveals, logo unveils, "wow" moments. WebGL — has GPU init cost. Cap: 1-2 per video (more than 2 dilutes impact + adds GPU init time). |
 
-Most videos use only CSS crossfades + hard cuts and ship beautifully. Reach for a shader transition only when a specific beat boundary EARNS the production-value bump (hero reveal at beat-1, CTA punch at the closer). If a video has no obvious "wow" boundary, skip shaders entirely. Mix shader and CSS crossfade in one HyperShader composition by omitting `shader` on any transition entry in the storyboard's `## Shader Transitions` block.
+Mix shader and CSS crossfade in one HyperShader composition by omitting `shader` on any transition entry in the storyboard's `## Shader Transitions` block.
 
 **Rhythm** — declare your scene rhythm before implementing: fast-fast-SLOW-fast-SHADER-hold. The rhythm comes from the brand and content, not a template.
 
@@ -408,7 +408,7 @@ Use the pacing you decided at the top of this step. The beat count, duration, an
 
 **Asset use isn't spamming when the concept needs it.** A 46-SVG grid of partner-company logos is one beat's primary content, not spam. Two captured assets layered in a beat (logo + hero photo) is normal. Multiple icons composed into a feature grid using the brand's real captured SVGs is normal. The spam rule applies to assets that DON'T serve any beat's meaning — those don't appear. The "use it / compose it / combine both" decision is per-beat judgment; trust the agent to read the beat's concept and pick what makes that beat awesome.
 
-**Opener default: fast intro to stop the scrollers.** Even a cinematic video should start with a punch — a logo strike, a kinetic word build, a particle burst, a captured hero illustration push-in, a 3D-rotating product photo, a typed-on terminal line, an SVG path drawing itself — anything that lands inside the first 1.0–1.5 seconds. (Shader bloom is also valid here but optional; the non-shader openers above are equally punchy and cheaper.) Slow intros work for prestige trailers; videos shipping anywhere social or feed-based need a hook that beats the 1.5-second scroll threshold. Plan the opener as the most ambitious beat in the storyboard, not the gentlest one.
+**Opener default: fast intro to stop the scrollers.** Even a cinematic video should start with a punch — anything that lands inside the first 1.0–1.5 seconds. Many options work equally well; pick what the brand calls for: a logo strike, a kinetic word build, a particle burst, a captured hero illustration push-in, a 3D-rotating product photo, a typed-on terminal line, an SVG path drawing itself, a shader bloom, a flash, a captured video clip cold-opening. Slow intros work for prestige trailers; videos shipping anywhere social or feed-based need a hook that beats the 1.5-second scroll threshold. Plan the opener as the most ambitious beat in the storyboard, not the gentlest one.
 
 **Named hook patterns** — pick one and write it into the opener beat's concept. Each is a known scroll-stopper; the choice depends on the brand and the message:
 
