@@ -19,9 +19,17 @@ import type { Page } from "puppeteer-core";
 /**
  * Resolve which capture mode to use when `useDrawElement` is true.
  *
- * Two cases fall back to screenshot (see docs/fast-capture-limitations.md):
- *  - transparent + SwiftShader: software-GL drops promoted sub-layers on a
- *    transparent canvas destination (Chromium bug 521434899).
+ * Cases that fall back to screenshot (see docs/fast-capture-limitations.md):
+ *  - SwiftShader (software rasterizer, i.e. Docker/CI with no GPU): drawElement
+ *    yields NO speedup here and is slightly slower. Its entire advantage is
+ *    skipping the GPU→CPU screenshot readback IPC — on SwiftShader there is no
+ *    GPU, so both paths block on identical software rasterization (measured
+ *    parity: font-variant-numeric baseline 7822ms vs fast 7979ms, page-side
+ *    draw/readback/encode all ~0ms). The drawElement path only adds a per-frame
+ *    CDP round-trip on top of the same raster cost, and on a transparent
+ *    destination additionally drops promoted sub-layers (Chromium bug
+ *    521434899). The speedup is real only on a hardware GPU (macOS 1.6×), so
+ *    SwiftShader always routes to the platform baseline.
  *  - hasVideo: a PROXY gate for the caption-pattern capture bug. The actual
  *    trigger (established by bisect + standalone repro, 2026-06-09) is the
  *    word-by-word caption opacity pattern: per-frame JS opacity writes on >=2
@@ -40,7 +48,11 @@ export function resolveDrawElementCaptureMode(
   transparent: boolean,
   hasVideo = false,
 ): "drawelement" | "screenshot" {
-  if (transparent && isSwiftShader) return "screenshot";
+  // `transparent` is retained for call-site clarity; SwiftShader blocks
+  // unconditionally now (no GPU egress to skip — parity at best), which
+  // subsumes the former transparent-only SwiftShader case.
+  void transparent;
+  if (isSwiftShader) return "screenshot";
   if (hasVideo) return "screenshot";
   return "drawelement";
 }

@@ -409,10 +409,9 @@ async function initDrawElementOrTransparentBackground(
         : await page.evaluate(() => document.querySelector("video") !== null);
     const mode = resolveDrawElementCaptureMode(session.isSwiftShader, transparent, hasVideo);
     if (mode === "screenshot") {
-      const reason =
-        transparent && session.isSwiftShader
-          ? "transparent output on SwiftShader (Chromium bug 521434899)"
-          : "composition contains <video> (proxy for the caption-pattern capture bug — see fast-capture-limitations.md Lim 2)";
+      const reason = session.isSwiftShader
+        ? "SwiftShader (software rasterizer — no GPU egress to skip, drawElement is parity-or-slower; see fast-capture-limitations.md)"
+        : "composition contains <video> (proxy for the caption-pattern capture bug — see fast-capture-limitations.md Lim 2)";
       // Fall back to the browser's LAUNCH mode, not unconditionally to
       // "screenshot": on a BeginFrame-launched browser (Linux fast capture)
       // Page.captureScreenshot hangs for the full protocol timeout, while

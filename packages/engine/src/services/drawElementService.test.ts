@@ -37,11 +37,11 @@ describe("detectSwiftShader", () => {
 
 describe("resolveDrawElementCaptureMode", () => {
   // signature: (isSwiftShader, transparent, hasVideo?, beginFramePaints?)
-  it("opaque + SwiftShader → drawelement (opaque works on SwiftShader)", () => {
-    expect(resolveDrawElementCaptureMode(true, false)).toBe("drawelement");
+  it("opaque + SwiftShader → screenshot (no GPU egress to skip — parity at best)", () => {
+    expect(resolveDrawElementCaptureMode(true, false)).toBe("screenshot");
   });
 
-  it("transparent + SwiftShader → screenshot (SwiftShader bug: sub-layers dropped)", () => {
+  it("transparent + SwiftShader → screenshot (also drops sub-layers; crbug 521434899)", () => {
     expect(resolveDrawElementCaptureMode(true, true)).toBe("screenshot");
   });
 
