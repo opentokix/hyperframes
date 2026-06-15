@@ -98,7 +98,7 @@ function flattenSnapshot(snap: ElementSnapshot): FlatSnapshot {
 
 type OpFieldResolver = (op: PatchOperation, flat: FlatSnapshot) => OpFields;
 
-const OP_FIELD_RESOLVERS: Record<string, OpFieldResolver> = {
+const OP_FIELD_RESOLVERS: Record<PatchOperation["type"], OpFieldResolver> = {
   "inline-style": (op, flat) => ({
     property: op.property,
     expected: op.value,
