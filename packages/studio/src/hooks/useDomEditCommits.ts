@@ -78,6 +78,13 @@ export interface UseDomEditCommitsParams {
   ) => Promise<DomEditSelection | null>;
   /** Stage 7 Step 3b: called after a successful server-side element patch. */
   onDomEditPersisted?: (selection: DomEditSelection, operations: PatchOperation[]) => void;
+  /** Stage 7 Step 3c: called before the server-side patch path; returns true if SDK handled it. */
+  onTrySdkPersist?: (
+    selection: DomEditSelection,
+    operations: PatchOperation[],
+    originalContent: string,
+    targetPath: string,
+  ) => Promise<boolean>;
 }
 
 export function useDomEditCommits({
@@ -99,6 +106,7 @@ export function useDomEditCommits({
   refreshDomEditSelectionFromPreview,
   buildDomSelectionFromTarget,
   onDomEditPersisted,
+  onTrySdkPersist,
 }: UseDomEditCommitsParams) {
   const resolveImportedFontAsset = useCallback(
     (fontFamilyValue: string): ImportedFontAsset | null => {
@@ -238,6 +246,7 @@ export function useDomEditCommits({
       reloadPreview,
       showToast,
       onDomEditPersisted,
+      onTrySdkPersist,
     ],
   );
 

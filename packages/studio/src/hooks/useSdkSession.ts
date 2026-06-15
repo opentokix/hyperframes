@@ -28,6 +28,12 @@ export function shouldReloadSdkSession(payload: unknown, activeCompPath: string 
  * is therefore purely additive — no SDK self-write exists yet, so there is no
  * persist echo. Step 3c must add self-write suppression once dispatch writes.
  */
+// Time-window heuristic: suppress file-change reloads for 2 s after our own
+// SDK cutover write, to avoid an echo-reload on the write we just committed.
+// Footgun: if 2 s is too short (slow FS / network) the reload fires anyway;
+// if too long it masks a legitimate external edit. The long-term shape is a
+// sequence number or content hash threaded through the persist event so the
+// comparison is exact rather than time-based.
 const SELF_WRITE_SUPPRESS_MS = 2000;
 
 export function useSdkSession(
