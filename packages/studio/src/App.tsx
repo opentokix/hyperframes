@@ -142,9 +142,7 @@ export function StudioApp() {
   const domEditSaveTimestampRef = useRef(0);
   const pendingTimelineEditPathRef = useRef(new Set<string>());
   const isGestureRecordingRef = useRef(false);
-  const reloadPreview = useCallback(() => {
-    setRefreshKey((k) => k + 1);
-  }, []);
+  const reloadPreview = useCallback(() => setRefreshKey((k) => k + 1), []);
   const fileManager = useFileManager({
     projectId,
     showToast,
@@ -153,7 +151,8 @@ export function StudioApp() {
     setRefreshKey,
   });
 
-  const sdkSession = useSdkSession(projectId, activeCompPath, domEditSaveTimestampRef);
+  const sdkHandle = useSdkSession(projectId, activeCompPath, domEditSaveTimestampRef);
+  const { session: sdkSession, forceReload: forceReloadSdkSession } = sdkHandle;
 
   useEffect(() => {
     if (activeCompPathHydrated) return;
@@ -257,6 +256,8 @@ export function StudioApp() {
     onResetKeyframes: () => resetKeyframesRef.current(),
     onDeleteSelectedKeyframes: () => deleteSelectedKeyframesRef.current(),
     onAfterUndoRedo: () => invalidateGsapCacheRef.current(),
+    activeCompPath,
+    forceReloadSdkSession,
     onToggleRecording: STUDIO_KEYFRAMES_ENABLED
       ? () => handleToggleRecordingRef.current()
       : undefined,

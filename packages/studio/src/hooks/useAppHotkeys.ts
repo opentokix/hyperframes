@@ -88,6 +88,14 @@ interface UseAppHotkeysParams {
   onDeleteSelectedKeyframes: () => void;
   onAfterUndoRedo?: () => void;
   onToggleRecording?: () => void;
+  /** Active composition path — used to decide whether undo/redo must resync the SDK session. */
+  activeCompPath?: string | null;
+  /**
+   * Force-reload the SDK session after undo/redo reverts the active comp file,
+   * bypassing the self-write suppress window. Without this, the suppress window
+   * blocks the file-change reload and the SDK session stays on pre-undo content.
+   */
+  forceReloadSdkSession?: () => void;
 }
 
 // ── Extracted keydown dispatch (pure function, no hooks) ──
@@ -264,6 +272,8 @@ export function useAppHotkeys({
   onDeleteSelectedKeyframes,
   onAfterUndoRedo,
   onToggleRecording,
+  activeCompPath,
+  forceReloadSdkSession,
 }: UseAppHotkeysParams) {
   const previewHotkeyWindowRef = useRef<Window | null>(null);
   const previewHistoryCleanupRef = useRef<(() => void) | null>(null);
@@ -308,6 +318,14 @@ export function useAppHotkeys({
       }
       if (result.ok && result.label) {
         onAfterUndoRedo?.();
+        // If the active composition was among the written files, force-reload
+        // the SDK session so its in-memory doc matches the reverted content.
+        // writeHistoryFile sets domEditSaveTimestampRef which activates the
+        // 2 s suppress window — without this call the file-change event would
+        // be swallowed and the SDK session would stay on stale pre-undo content.
+        if (activeCompPath && result.paths?.includes(activeCompPath)) {
+          forceReloadSdkSession?.();
+        }
         await syncHistoryPreviewAfterApply(result.paths);
         showToast(`${direction === "undo" ? "Undid" : "Redid"} ${result.label}`, "info");
       }
@@ -320,6 +338,8 @@ export function useAppHotkeys({
       waitForPendingDomEditSaves,
       writeHistoryFile,
       onAfterUndoRedo,
+      activeCompPath,
+      forceReloadSdkSession,
     ],
   );
 
