@@ -34,6 +34,14 @@
       "import": "./src/compiler/index.ts",
       "types": "./src/compiler/index.ts"
     },
+    "./color-looks": {
+      "import": "./src/colorLooks.ts",
+      "types": "./src/colorLooks.ts"
+    },
+    "./color-luts": {
+      "import": "./src/colorLuts.ts",
+      "types": "./src/colorLuts.ts"
+    },
     "./runtime": "./dist/hyperframe.runtime.iife.js",
     "./runtime/lottie-readiness": {
       "import": "./src/lottieReadiness.ts",
@@ -116,6 +124,14 @@
       "./compiler": {
         "import": "./dist/compiler/index.js",
         "types": "./dist/compiler/index.d.ts"
+      },
+      "./color-looks": {
+        "import": "./dist/colorLooks.js",
+        "types": "./dist/colorLooks.d.ts"
+      },
+      "./color-luts": {
+        "import": "./dist/colorLuts.js",
+        "types": "./dist/colorLuts.d.ts"
       },
       "./runtime": "./dist/hyperframe.runtime.iife.js",
       "./runtime/lottie-readiness": {

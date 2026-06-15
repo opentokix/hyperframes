@@ -132,6 +132,25 @@ export {
 export { CSS_URL_RE, isNonRelativeUrl, isPathInside } from "./compiler/assetPaths";
 export { decodeUrlPathVariants } from "./utils/urlPath";
 export { parseAnimatedGifMetadata, type AnimatedGifMetadata } from "./media/gif";
+export {
+  HF_LOOK_ATTR,
+  HF_LOOK_ADJUST_KEYS,
+  HF_LOOK_COLOR_SPACE,
+  HF_LOOK_PRESETS,
+  getHfLookPreset,
+  isHfLookActive,
+  normalizeHfLook,
+  parseHfLookAttribute,
+  serializeHfLook,
+  type HfLook,
+  type HfLookAdjust,
+  type HfLookAdjustKey,
+  type HfLookLutRef,
+  type HfLookPreset,
+  type HfLookPresetId,
+  type HfLookTarget,
+  type NormalizedHfLook,
+} from "./colorLooks";
 
 // Inline scripts
 export {
