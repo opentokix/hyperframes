@@ -298,15 +298,16 @@ export function gsapAnimationsToKeyframes(
   const baseTimeEpsilon = 0.001;
   const baseValueEpsilon = 0.00001;
 
-  return animations
-    .filter(
-      (a): a is GsapAnimation & { position: number } =>
-        validMethods.includes(a.method) && typeof a.position === "number",
-    )
-    // fallow-ignore-next-line complexity
-    .map((a) => {
-      const relativeTimeRaw = a.position - elementStartTime;
-      const time = clampTimeToZero ? Math.max(0, relativeTimeRaw) : relativeTimeRaw;
+  return (
+    animations
+      .filter(
+        (a): a is GsapAnimation & { position: number } =>
+          validMethods.includes(a.method) && typeof a.position === "number",
+      )
+      // fallow-ignore-next-line complexity
+      .map((a) => {
+        const relativeTimeRaw = a.position - elementStartTime;
+        const time = clampTimeToZero ? Math.max(0, relativeTimeRaw) : relativeTimeRaw;
 
         const properties: Partial<KeyframeProperties> = {};
         for (const [key, value] of Object.entries(a.properties)) {
@@ -331,12 +332,13 @@ export function gsapAnimationsToKeyframes(
           return null;
         }
 
-      return {
-        id: a.id.replace(/^.*-kf-/, ""),
-        time,
-        properties: properties as KeyframeProperties,
-        ease: a.ease,
-      };
-    })
-    .filter((kf): kf is NonNullable<typeof kf> => kf !== null);
+        return {
+          id: a.id.replace(/^.*-kf-/, ""),
+          time,
+          properties: properties as KeyframeProperties,
+          ease: a.ease,
+        };
+      })
+      .filter((kf): kf is NonNullable<typeof kf> => kf !== null)
+  );
 }
