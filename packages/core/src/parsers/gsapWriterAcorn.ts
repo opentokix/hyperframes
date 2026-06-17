@@ -331,16 +331,85 @@ export function updateAnimationInScript(
   }
 
   if (updates.position !== undefined) {
-    const posIdx = call.method === "fromTo" ? 3 : 2;
-    const posArgNode = call.node.arguments?.[posIdx];
-    if (posArgNode) {
-      ms.overwrite(posArgNode.start, posArgNode.end, valueToCode(updates.position));
-    } else {
-      ms.appendLeft(call.node.end - 1, `, ${valueToCode(updates.position)}`);
-    }
+    overwritePosition(ms, call, updates.position);
   }
 
   return ms.toString();
+}
+
+/**
+ * Overwrite a tween call's numeric position argument (the positionArg the parser
+ * located: 3rd arg for fromTo, else 2nd), or append one when the call has no
+ * explicit position. Shared by updateAnimationInScript and the
+ * shift/scalePositionsInScript timeline ops.
+ */
+function overwritePosition(ms: MagicString, call: TweenCallInfo, position: number | string): void {
+  if (call.positionArg) {
+    ms.overwrite(call.positionArg.start, call.positionArg.end, valueToCode(position));
+  } else {
+    ms.appendLeft(call.node.end - 1, `, ${valueToCode(position)}`);
+  }
+}
+
+/**
+ * Shift every tween targeting `targetSelector` by `delta` seconds (clamped ≥0),
+ * rewriting each call's position argument. Mirrors recast's shiftPositionsInScript
+ * (used by timeline clip-move to keep GSAP positions in sync with the clip start).
+ */
+export function shiftPositionsInScript(
+  script: string,
+  targetSelector: string,
+  delta: number,
+): string {
+  const parsed = parseGsapScriptAcornForWrite(script);
+  if (!parsed) return script;
+  const ms = new MagicString(script);
+  let changed = false;
+  for (const entry of parsed.located) {
+    if (entry.animation.targetSelector !== targetSelector) continue;
+    if (typeof entry.animation.position !== "number") continue;
+    const newPos = Math.max(0, Math.round((entry.animation.position + delta) * 1000) / 1000);
+    overwritePosition(ms, entry.call, newPos);
+    changed = true;
+  }
+  return changed ? ms.toString() : script;
+}
+
+/**
+ * Linearly remap every tween targeting `targetSelector` from the old clip
+ * [oldStart, oldDuration] onto the new [newStart, newDuration] (position and,
+ * when present, duration scaled by the duration ratio). Mirrors recast's
+ * scalePositionsInScript (used by timeline clip-resize).
+ */
+export function scalePositionsInScript(
+  script: string,
+  targetSelector: string,
+  oldStart: number,
+  oldDuration: number,
+  newStart: number,
+  newDuration: number,
+): string {
+  if (oldDuration <= 0 || newDuration <= 0) return script;
+  const ratio = newDuration / oldDuration;
+  const parsed = parseGsapScriptAcornForWrite(script);
+  if (!parsed) return script;
+  const ms = new MagicString(script);
+  let changed = false;
+  for (const entry of parsed.located) {
+    if (entry.animation.targetSelector !== targetSelector) continue;
+    if (typeof entry.animation.position !== "number") continue;
+    const newPos = Math.max(
+      0,
+      Math.round((newStart + (entry.animation.position - oldStart) * ratio) * 1000) / 1000,
+    );
+    overwritePosition(ms, entry.call, newPos);
+    if (typeof entry.animation.duration === "number" && entry.animation.duration > 0) {
+      const newDur = Math.max(0.001, Math.round(entry.animation.duration * ratio * 1000) / 1000);
+      upsertProp(ms, entry.call.varsArg, "duration", newDur);
+    }
+    changed = true;
+  }
+  return changed ? ms.toString() : script;
 }
 
 export function addAnimationToScript(
@@ -1631,4 +1700,89 @@ export function splitAnimationsInScript(
   }
 
   return { script: result, skippedSelectors };
+}
+
+// ── Unroll dynamic animations ────────────────────────────────────────────────
+
+function isLoopNode(node: any): boolean {
+  const t = node?.type;
+  return (
+    t === "ForStatement" ||
+    t === "ForInStatement" ||
+    t === "ForOfStatement" ||
+    t === "WhileStatement"
+  );
+}
+
+function isForEachStatement(node: any): boolean {
+  return (
+    node?.type === "ExpressionStatement" &&
+    node.expression?.type === "CallExpression" &&
+    node.expression.callee?.property?.name === "forEach"
+  );
+}
+
+function findEnclosingLoop(ancestors: any[]): { start: number; end: number } | null {
+  for (let i = ancestors.length - 2; i >= 0; i--) {
+    const node = ancestors[i];
+    if (isLoopNode(node) || isForEachStatement(node)) {
+      return { start: node.start as number, end: node.end as number };
+    }
+  }
+  return null;
+}
+
+function buildUnrollReplacement(
+  timelineVar: string,
+  animation: GsapAnimation,
+  elements: Array<{
+    selector: string;
+    keyframes: Array<{ percentage: number; properties: Record<string, number | string> }>;
+    easeEach?: string;
+  }>,
+): string {
+  const duration = typeof animation.duration === "number" ? animation.duration : 8;
+  const ease = typeof animation.ease === "string" ? animation.ease : "none";
+  const pos = animation.position ?? 0;
+  const posCode = typeof pos === "number" ? String(pos) : JSON.stringify(pos);
+  const calls = elements.map((el) => {
+    const sorted = [...el.keyframes].sort((a, b) => a.percentage - b.percentage);
+    const kfCode = buildKeyframeObjectCode(sorted, el.easeEach);
+    return `${timelineVar}.to(${JSON.stringify(el.selector)}, { keyframes: ${kfCode}, duration: ${duration}, ease: ${JSON.stringify(ease)} }, ${posCode});`;
+  });
+  return calls.join("\n  ");
+}
+
+export type UnrollElement = {
+  selector: string;
+  keyframes: Array<{ percentage: number; properties: Record<string, number | string> }>;
+  easeEach?: string;
+};
+
+/**
+ * Replace a dynamic loop that generates multiple tween calls with individual
+ * static `tl.to()` calls — one per element. Finds the loop containing the
+ * animation and replaces the entire loop body with unrolled static calls.
+ */
+export function unrollDynamicAnimations(
+  script: string,
+  animationId: string,
+  elements: UnrollElement[],
+): string {
+  const parsed = parseGsapScriptAcornForWrite(script);
+  if (!parsed) return script;
+  const target = parsed.located.find((l) => l.id === animationId);
+  if (!target) return script;
+
+  const replacement = buildUnrollReplacement(parsed.timelineVar, target.animation, elements);
+  const ms = new MagicString(script);
+  const loop = findEnclosingLoop(target.call.ancestors);
+  if (loop) {
+    ms.overwrite(loop.start, loop.end, replacement);
+  } else {
+    const stmt = findEnclosingExpressionStatement(target.call.ancestors);
+    if (!stmt) return script;
+    ms.overwrite(stmt.start as number, stmt.end as number, replacement);
+  }
+  return ms.toString();
 }
