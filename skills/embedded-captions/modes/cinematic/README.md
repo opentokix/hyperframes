@@ -2,9 +2,7 @@
 
 > Cinematic mode compiles **[../../dna/](../../dna/README.md)** through
 > **[engine.html](engine.html)** (`make-composition.cjs`). The old per-template HTML
-> shells are retired — `cinematic-cream` maps to `dna: "cream"` automatically; the other
-> archived templates (memory-wall / champion / portrait-header, in [\_archive/](_archive/))
-> remain as design references only.
+> shells are retired — `cinematic-cream` maps to `dna: "cream"` automatically.
 
 Use this mode for pure-embed asks (no rail): brand film, hype, social reel, showcase.
 The **DNA** locks the visual language (type, palette scheme, blend, motion grammar, hero

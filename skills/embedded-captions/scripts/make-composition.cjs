@@ -7,9 +7,9 @@
  * direction contact shadow, depth-match blur, hero three-act orchestration with
  * RMS-coupled amplitude. plan.template="cinematic-cream" maps to dna "cream".
  *
- * Legacy path: plan.template naming an archived template dir still compiles 1:1
- * (memory-wall / champion / portrait-header in modes/cinematic/_archive are NOT
- * auto-discovered — restore them to modes/cinematic/ to use).
+ * Legacy path: plan.template naming a template dir still compiles 1:1, but the old
+ * per-template shells (memory-wall / champion / portrait-header) are no longer shipped —
+ * recover from git history into modes/cinematic/ if ever needed.
  *
  *   node make-composition.cjs <project-dir>
  */
