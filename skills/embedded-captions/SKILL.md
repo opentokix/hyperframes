@@ -246,12 +246,6 @@ track has its own, much simpler spec → **[references/rail.md](references/rail.
 
 ## Non-negotiables
 
-**Guaranteed by construction — nothing to maintain:**
-
-- **Determinism.** You author JSON, never GSAP — the engine emits deterministic, seek-safe code (no `Math.random` / `Date.now` / `repeat:-1`, and no `letter-spacing` / `filter:blur` animated on entrance, which reflows), and `hyperframes lint`/`validate` backstops it. You cannot introduce these.
-- **Theme word timing is exact.** make-theme's compile-time sequential matcher COPIES each authored word's timing straight from `transcript.json` (no drift possible) and **hard-fails the compile** if your `lines` don't follow transcript order verbatim or drop a word.
-- **Captions never cover the face.** Compositing order — the embed sits BEHIND the subject matte, the rail is a lower-third — so a caption physically cannot land on the face.
-
 **A gate catches these — but you usually CAN'T predict them before previewing, so PREVIEW and iterate (the first compile/render often won't be right):**
 
 - **Caption hidden by the subject (occlusion).** Depends on the actual matte at that instant — NOT predictable from the JSON. The embed TARGET is ~30–55% occluded (big + visibly behind the speaker, not minimized); `check-occlusion.cjs --strict` ABORTS the render if the subject hides a caption word (>65%). On failure: move the hero to a clearer band / a different beat, or demote it. Catch it in `preview-frames.cjs`, never in a paid render.
