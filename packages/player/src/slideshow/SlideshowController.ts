@@ -15,29 +15,21 @@ interface StackFrame {
 }
 
 const MAIN = "main";
-const EPS = 0.001;
 
 export class SlideshowController {
   private stack: StackFrame[] = [{ sequenceId: MAIN, slideIndex: 0, fragmentIndex: -1 }];
-  private holdAt: number | null = null;
-  // The logical hold (a fragment time / slide point). playTo() plays a short way
-  // PAST it (to holdAt) so the composition repaints; holdTarget is what onTime
-  // matches against fragments to advance fragmentIndex.
-  private holdTarget: number | null = null;
   private changeCbs = new Set<() => void>();
-  private unsub: () => void;
 
   constructor(
     private player: PlayerPort,
     private show: ResolvedSlideshow,
   ) {
-    this.unsub = player.onTimeUpdate((t) => this.onTime(t));
     this.enterSlide(0);
   }
 
   // fallow-ignore-next-line unused-class-member
   dispose(): void {
-    this.unsub();
+    // No subscriptions to tear down — navigation is seek-driven (see playTo).
   }
 
   private slidesOf(sequenceId: string): ResolvedSlide[] {
@@ -101,17 +93,22 @@ export class SlideshowController {
 
   private enterSlide(index: number): void {
     this.frame.slideIndex = index;
-    this.frame.fragmentIndex = -1;
-    this.holdAt = null;
     const slide = this.currentSlide;
-    if (!slide) return;
+    if (!slide) {
+      this.frame.fragmentIndex = -1;
+      return;
+    }
     // Jump to the slide's first hold and stay there (no auto-progress). With
-    // fragments that's the first fragment; without, a settled frame INSIDE the
-    // slide (its midpoint) — NOT slide.end, which is the boundary where the next
-    // scene begins (else slide 1 would render slide 2's content).
-    const firstHold =
-      slide.fragments.length > 0 ? (slide.fragments[0] ?? slide.end) : this.restFrame(slide);
-    this.playTo(firstHold);
+    // fragments that's the first fragment (fragmentIndex 0); without, a settled
+    // frame INSIDE the slide (its midpoint) — NOT slide.end, which is the boundary
+    // where the next scene begins (else slide 1 would render slide 2's content).
+    if (slide.fragments.length > 0) {
+      this.frame.fragmentIndex = 0;
+      this.playTo(slide.fragments[0] ?? slide.end);
+    } else {
+      this.frame.fragmentIndex = -1;
+      this.playTo(this.restFrame(slide));
+    }
     this.emitChange();
   }
 
@@ -141,56 +138,25 @@ export class SlideshowController {
         : slide.fragments.length > 0
           ? slide.start
           : this.restFrame(slide);
-    this.holdAt = null;
     this.playTo(seekTime);
     this.emitChange();
   }
 
-  private nextStop(slide: ResolvedSlide, fragmentIndex: number): number {
-    const next = slide.fragments[fragmentIndex + 1];
-    return next ?? slide.end;
-  }
-
   /**
-   * Jump to hold time `t` and hold there — deterministically, with NO sustained
-   * playback so a slide can never auto-progress.
+   * Jump to hold time `t` and hold there — a pure, synchronous seek with NO
+   * sustained playback, so a slide can never auto-progress.
    *
-   * Seek to the EXACT target (so the first repainted frame is the correct one —
-   * seeking before it would flash a pre-target frame / the previous scene), then
-   * play and pause on the VERY FIRST timeupdate at-or-after `t`. A bare paused
-   * seek doesn't repaint some compositions, so one frame of playback is needed to
-   * force a paint — and `timeupdate` only fires from the playback clock (never on
-   * seek), so the first tick is guaranteed to be a painted frame. Bounding the
-   * hold to that single tick (rather than a fixed time window) means a missed or
-   * coarse timeupdate can't overrun the hold into the next fragment or scene.
-   * This is the determinism fix for the auto-progress flakiness.
+   * `player.seek(t)` drives the composition's GSAP timeline directly (the player
+   * reaches the same-origin iframe's `__timelines`), and GSAP `.seek()` renders
+   * that frame synchronously AND leaves the timeline paused. So one seek both
+   * repaints and holds — deterministically, in every window including a
+   * backgrounded one. (The previous play-a-frame-then-pause-on-a-timeupdate
+   * "render nudge" left an unfocused audience window playing while it waited for
+   * a throttled tick to pause it — that was the auto-progress / one-side-frozen
+   * flakiness. fragmentIndex is now set by the caller, not on a played tick.)
    */
   private playTo(t: number): void {
-    this.holdTarget = t;
-    this.holdAt = t; // pause on the first tick at/after the exact target
     this.player.seek(t);
-    this.player.play();
-  }
-
-  private onTime(tt: number): void {
-    if (this.holdAt === null) return;
-    // First timeupdate at/after the seeked target → one frame has painted; pause.
-    if (tt < this.holdAt - EPS) return;
-    const target = this.holdTarget;
-    this.holdAt = null;
-    this.holdTarget = null;
-    // Pause FIRST so playback stops on this tick, before any change handlers run —
-    // leaving no window for a second timeupdate to advance the playhead.
-    this.player.pause();
-    // Advance fragmentIndex if the logical target is a fragment boundary.
-    const slide = this.currentSlide;
-    if (slide && target !== null) {
-      const fragIdx = slide.fragments.indexOf(target);
-      if (fragIdx !== -1) {
-        this.frame.fragmentIndex = fragIdx;
-        this.emitChange();
-      }
-    }
   }
 
   next(): void {
@@ -198,9 +164,10 @@ export class SlideshowController {
     if (!slide) return;
     const hasMoreFragments = this.frame.fragmentIndex + 1 < slide.fragments.length;
     if (hasMoreFragments) {
-      // Reveal the next fragment. onTime() advances fragmentIndex at the hold.
-      const nextTarget = this.nextStop(slide, this.frame.fragmentIndex);
-      this.playTo(nextTarget);
+      // Reveal the next fragment — advance the index and seek to its hold time.
+      this.frame.fragmentIndex += 1;
+      const target = slide.fragments[this.frame.fragmentIndex] ?? slide.end;
+      this.playTo(target);
       this.emitChange();
       return;
     }
