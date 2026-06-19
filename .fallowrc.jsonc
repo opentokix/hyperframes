@@ -247,6 +247,11 @@
       // SlideshowPanel.test.ts: parallel arrange/act/assert test cases — collapsing
       // them would hurt readability of what each case verifies.
       "packages/studio/src/components/panels/SlideshowPanel.test.ts",
+      // present.ts mirrors play.ts's server startup + console-output block. The
+      // shared low-level pieces (resolve*/injectRuntime/listenOnFreePort) are in
+      // utils/compositionServer.ts; the remaining clone is per-command logging text
+      // (different labels/help lines) — extracting it would over-abstract.
+      "packages/cli/src/commands/present.ts",
     ],
   },
   "health": {
@@ -276,6 +281,12 @@
       // reducing real complexity. File-level exemption (not an inline comment)
       // avoids the line-shift fingerprint problem noted above.
       "packages/studio/src/components/panels/SlideshowPanel.tsx",
+      // play.ts / present.ts: CLI command entrypoints whose cyclomatic count is
+      // browser/arg validation + server wiring (same shape as preview.ts). The
+      // serving logic is factored into utils/compositionServer.ts; the remaining
+      // body is linear validation that reads clearly inline.
+      "packages/cli/src/commands/play.ts",
+      "packages/cli/src/commands/present.ts",
     ],
   },
 }
