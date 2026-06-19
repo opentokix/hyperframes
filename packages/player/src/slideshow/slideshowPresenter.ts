@@ -66,32 +66,32 @@ export class SlideshowChannel {
 }
 
 /**
- * Builds the presenter-mode inner HTML showing current slide area,
- * next-slide preview, notes, counter, and elapsed timer.
+ * Builds the presenter-mode bottom panel: speaker notes + up-next + counter +
+ * elapsed. The live slide is shown ABOVE this panel (the component confines the
+ * player to the top region). Returns the panel HTML only — the component appends
+ * the nav controls separately.
  */
 export function buildPresenterLayout(opts: {
-  currentSlideHtml: string;
-  nextSlideHtml: string;
   notes: string;
+  nextText: string;
   counterText: string;
   elapsedText: string;
 }): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
+  const notes = opts.notes
+    ? esc(opts.notes)
+    : `<span style="opacity:.4">No notes for this slide</span>`;
   return `
-<div data-hf-presenter style="display:grid;grid-template-columns:2fr 1fr;grid-template-rows:auto 1fr;gap:12px;padding:12px;height:100%;box-sizing:border-box;background:#1a1a1a;color:#fff;font-family:sans-serif;">
-  <div data-hf-presenter-current style="grid-column:1;grid-row:1/3;border:2px solid #444;border-radius:6px;overflow:hidden;position:relative;">
-    ${opts.currentSlideHtml}
-  </div>
-  <div style="grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:8px;">
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.6;">Next</div>
-    <div data-hf-presenter-next style="border:1px solid #333;border-radius:4px;overflow:hidden;opacity:.7;">
-      ${opts.nextSlideHtml}
+<div data-hf-presenter style="position:absolute;left:0;right:0;bottom:0;height:32%;display:flex;background:#11151f;color:#fff;border-top:2px solid rgba(255,255,255,0.12);box-sizing:border-box;font-family:sans-serif;pointer-events:auto;">
+  <div data-hf-presenter-notes style="flex:1;min-width:0;padding:24px 36px;overflow-y:auto;font-size:21px;line-height:1.55;">${notes}</div>
+  <div style="width:380px;flex-shrink:0;border-left:1px solid rgba(255,255,255,0.12);padding:24px 28px;display:flex;flex-direction:column;gap:10px;">
+    <div style="font-size:12px;text-transform:uppercase;letter-spacing:.12em;opacity:.55;">Up next</div>
+    <div data-hf-presenter-next style="font-size:17px;opacity:.9;line-height:1.4;">${esc(opts.nextText)}</div>
+    <div style="display:flex;gap:34px;margin-top:auto;">
+      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;opacity:.5;margin-bottom:3px;">Slide</div><div data-hf-presenter-counter style="font-size:23px;font-variant-numeric:tabular-nums;">${esc(opts.counterText)}</div></div>
+      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;opacity:.5;margin-bottom:3px;">Elapsed</div><div data-hf-presenter-elapsed style="font-size:23px;font-variant-numeric:tabular-nums;">${esc(opts.elapsedText)}</div></div>
     </div>
-    <div data-hf-presenter-counter style="font-size:13px;opacity:.8;">${esc(opts.counterText)}</div>
-    <div data-hf-presenter-elapsed style="font-size:13px;font-variant-numeric:tabular-nums;">${esc(opts.elapsedText)}</div>
   </div>
-  <div data-hf-presenter-notes style="grid-column:2;grid-row:2;overflow-y:auto;font-size:13px;line-height:1.5;opacity:.9;border-top:1px solid #333;padding-top:8px;">${esc(opts.notes)}</div>
 </div>`.trim();
 }
 

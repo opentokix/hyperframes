@@ -599,8 +599,12 @@ describe("SlideshowController syncTo", () => {
     c.syncTo("deep", 0, -1);
     expect(c.position.sequenceId).toBe("deep");
     expect(c.position.slideIndex).toBe(0);
-    // resumeSlide seeks to slide start (fragmentIndex -1), and pauses (no play).
+    // resumeSlide seeks to slide start, then plays one frame so the composition
+    // repaints (a bare paused seek doesn't re-render some compositions); onTime
+    // pauses again as soon as the player reports it has reached the hold.
     expect(p.seek).toHaveBeenLastCalledWith(10);
+    expect(p.play).toHaveBeenCalled();
+    p.emit(50); // player passes the render-nudge hold
     expect(p.pause).toHaveBeenCalled();
   });
 

@@ -16,6 +16,10 @@ interface StackFrame {
 
 const MAIN = "main";
 const EPS = 0.001;
+// Seconds to play past a restored/mirrored position so the composition repaints
+// (a bare paused seek doesn't re-render some compositions; pausing on the first
+// timeupdate fires before a paint).
+const RENDER_NUDGE = 0.2;
 
 export class SlideshowController {
   private stack: StackFrame[] = [{ sequenceId: MAIN, slideIndex: 0, fragmentIndex: -1 }];
@@ -120,9 +124,14 @@ export class SlideshowController {
       fragmentIndex >= 0 && fragmentIndex < slide.fragments.length
         ? (slide.fragments[fragmentIndex] ?? slide.start)
         : slide.start;
-    this.holdAt = null;
+    // Seek to the target, then play a short way PAST it so the composition
+    // actually repaints — a bare seek while paused does not re-render some
+    // compositions (the audience mirror would otherwise stay frozen on the first
+    // frame), and pausing on the very first timeupdate fires before a paint.
+    // onTime() pauses once playback passes the hold (~a few frames later).
+    const renderHold = Math.min(seekTime + RENDER_NUDGE, slide.end);
     this.player.seek(seekTime);
-    this.player.pause();
+    this.playTo(renderHold);
     this.emitChange();
   }
 
