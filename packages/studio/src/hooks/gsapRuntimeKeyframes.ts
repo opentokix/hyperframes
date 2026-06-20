@@ -72,6 +72,17 @@ function isXY(p: unknown): p is { x: number; y: number } {
   return !!p && typeof (p as any).x === "number" && typeof (p as any).y === "number";
 }
 
+/**
+ * A tween we must skip when reading keyframes: a zero-duration `set`/hold (incl.
+ * the studio pre-keyframe position hold, tagged `data: STUDIO_HOLD_MARKER`).
+ * These sit before the real keyframed tween and otherwise shadow it — `readTween`
+ * would fall back to a degenerate 2-point flat path from the set's values, hiding
+ * the actual multi-keyframe motion. `!(duration > 0)` also rejects NaN durations.
+ */
+function isZeroDurationSet(duration: number): boolean {
+  return !(duration > 0);
+}
+
 /** Coordinates + curviness from a live `vars.motionPath` value (object or array form), or null. */
 function coordsFromMotionPath(mp: unknown): {
   coords: Array<{ x: number; y: number }>;
@@ -186,12 +197,8 @@ export function readRuntimeKeyframes(
   let firstRead: ReadTween | null = null;
   for (const tween of timeline.getChildren(true)) {
     if (!tween.vars || !matchesElement(tween, targetEl)) continue;
-    // Skip zero-duration tweens (`tl.set(...)`, incl. the studio position-hold
-    // `data:"hf-hold"`). They sit before the real keyframed tween and otherwise
-    // shadow it — `readTween` falls back to a degenerate 2-point flat path from
-    // the set's values, hiding the actual multi-keyframe motion.
     const dur = typeof tween.duration === "function" ? tween.duration() : 0;
-    if (!(dur > 0)) continue;
+    if (isZeroDurationSet(dur)) continue; // skip hold/set tweens (see isZeroDurationSet)
     const read = readTween(tween.vars);
     if (!read) continue;
     if (firstRead === null) firstRead = read;
@@ -243,9 +250,7 @@ function addScanEntry(
 ): void {
   if (!tween.targets || !tween.vars) return;
   const { start, duration } = tweenTiming(tween);
-  // Skip zero-duration sets/holds — they shadow the real keyframed tween (see
-  // readRuntimeKeyframes).
-  if (!(duration > 0)) return;
+  if (isZeroDurationSet(duration)) return; // skip hold/set tweens (see isZeroDurationSet)
   const read = readTween(tween.vars);
   if (!read) return;
   for (const target of tween.targets()) {

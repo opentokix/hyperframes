@@ -115,10 +115,18 @@ export function parsePercentageKeyframes(
   const keyframes: ParsedPercentageKeyframes["keyframes"] = [];
   let easeEach: string | undefined;
 
-  // GSAP array-form keyframes — `keyframes: [{x,y}, {x,y}, ...]` — are evenly
-  // distributed across the tween, so step i of n maps to i/(n-1)*100%. (The object
-  // form below uses explicit "0%" keys.) Without this, array-keyframed tweens (e.g.
-  // a multi-point shuttle path) read as null → no motion path.
+  // GSAP array-form keyframes — `keyframes: [{x,y}, {x,y}, ...]` — are spread
+  // evenly across the tween by default: GSAP gives each entry an equal share of
+  // the duration unless an entry carries its own `duration`/`delay`, which the
+  // studio never emits. So entry i of n maps to i/(n-1)*100% (n=4 → 0/33.3/66.7/100).
+  // Index spacing counts EVERY array slot, including a degenerate entry that
+  // contributes no animatable prop (it's still a slot GSAP allocates a position
+  // to), so dropping such an entry from the output below must NOT shift the others.
+  // A per-entry `ease` is a segment ease, not a keyframe value, so it's skipped as
+  // a property; there is no array-form `easeEach` (that's an object-form sibling key).
+  // (The object form further down uses explicit "0%" keys instead.) Without this
+  // branch, array-keyframed tweens (e.g. a multi-point shuttle) read as null → no
+  // motion path.
   if (Array.isArray(kfObj)) {
     const steps = kfObj as unknown[];
     steps.forEach((entry, i) => {

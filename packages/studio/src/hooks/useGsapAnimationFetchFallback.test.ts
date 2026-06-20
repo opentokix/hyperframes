@@ -8,20 +8,29 @@ const parsed = (anims: GsapAnimation[]): ParsedGsap => ({ animations: anims }) a
 const target = { id: "puck-a", selector: "#puck-a" };
 
 describe("selectElementAnimationsOrRetry", () => {
-  it("returns null (retry) when the parse is cold — null or zero total animations", () => {
-    expect(selectElementAnimationsOrRetry(null, target)).toBeNull();
-    expect(selectElementAnimationsOrRetry(parsed([]), target)).toBeNull();
+  it("signals fetch-error (short retry) when the fetch itself failed (null)", () => {
+    // A null parse means fetchParsedAnimations hit a 404/network/JSON failure —
+    // not a parse-warming race, so it must NOT be conflated with a cold parse.
+    expect(selectElementAnimationsOrRetry(null, target)).toEqual({ kind: "fetch-error" });
   });
 
-  it("returns the matching animations from a warm parse", () => {
-    const result = selectElementAnimationsOrRetry(
+  it("signals cold (full retry budget) when the parse is reachable but has zero total animations", () => {
+    expect(selectElementAnimationsOrRetry(parsed([]), target)).toEqual({ kind: "cold" });
+  });
+
+  it("resolves the matching animations from a warm parse", () => {
+    const outcome = selectElementAnimationsOrRetry(
       parsed([anim("#puck-a"), anim("#other")]),
       target,
     );
-    expect(result?.map((a) => a.targetSelector)).toEqual(["#puck-a"]);
+    expect(outcome.kind).toBe("resolved");
+    expect(outcome.kind === "resolved" && outcome.animations.map((a) => a.targetSelector)).toEqual([
+      "#puck-a",
+    ]);
   });
 
-  it("returns [] (no retry) for a warm parse with no match — element genuinely has no animation", () => {
-    expect(selectElementAnimationsOrRetry(parsed([anim("#other")]), target)).toEqual([]);
+  it("resolves to [] (no retry) for a warm parse with no match — element genuinely has no animation", () => {
+    const outcome = selectElementAnimationsOrRetry(parsed([anim("#other")]), target);
+    expect(outcome).toEqual({ kind: "resolved", animations: [] });
   });
 });
