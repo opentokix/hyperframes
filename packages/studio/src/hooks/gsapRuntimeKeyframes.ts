@@ -173,17 +173,38 @@ export interface ResolvedRuntimeTween {
 }
 
 /**
+ * Whether a tween's `vars` carry at least one of `channels` as an OWN property.
+ * Used to disambiguate co-located `set`s: an element can have separate
+ * `tl.set("#el",{x,y})` and `tl.set("#el",{rotation})` tweens, and a position
+ * patch must land on the {x,y} set — never the rotation-only one.
+ */
+function varsCarryChannel(vars: Record<string, unknown> | undefined, channels: string[]): boolean {
+  if (!vars) return false;
+  for (const ch of channels) {
+    if (Object.prototype.hasOwnProperty.call(vars, ch)) return true;
+  }
+  return false;
+}
+
+/**
  * Resolve the live tween targeting `selector` using the SAME all-timelines scan
  * `readRuntimeKeyframes` uses, so read and write agree on "which tween". With
  * `kind: "keyframe"` it skips zero-duration `set`s and prefers the tween whose
  * range contains the playhead (matching the reader). With `kind: "set"` it picks
  * the zero-duration `set`/hold instead. Returns null when none matches.
+ *
+ * `channels` disambiguates co-located `set`s (CHANNEL-BLIND otherwise): when
+ * provided with `kind: "set"`, a set carrying ONE of those channels wins, and a
+ * set carrying ONLY disjoint channels is skipped (so patching {x,y} never lands
+ * on a rotation-only set). With no channel-matching set, it falls back to the
+ * first matching set (back-compat). `channels` is ignored for `kind: "keyframe"`.
  */
 export function resolveRuntimeTween(
   iframe: HTMLIFrameElement | null,
   selector: string,
   kind: "keyframe" | "set",
   compositionId?: string,
+  channels?: string[],
 ): ResolvedRuntimeTween | null {
   const timelines = timelinesOf(iframe);
   if (!timelines) return null;
@@ -200,7 +221,10 @@ export function resolveRuntimeTween(
     ? [compositionId]
     : Object.keys(timelines).filter((k) => typeof timelines[k]?.getChildren === "function");
 
+  const wantChannels = kind === "set" && channels && channels.length > 0 ? channels : null;
+
   let first: ResolvedRuntimeTween | null = null;
+  let channelMatch: ResolvedRuntimeTween | null = null;
   for (const tlId of tlIds) {
     const timeline = timelines[tlId];
     if (!timeline?.getChildren) continue;
@@ -210,6 +234,16 @@ export function resolveRuntimeTween(
       const dur = typeof tween.duration === "function" ? tween.duration() : 0;
       const isSet = !(dur > 0);
       if (kind === "set" ? !isSet : isSet) continue;
+      if (wantChannels) {
+        if (varsCarryChannel(tween.vars, wantChannels)) {
+          if (channelMatch === null) channelMatch = { tween, timeline };
+        } else if (first === null) {
+          // A set carrying only disjoint channels: remember as last-resort
+          // fallback, but never prefer it over a channel-matching set.
+          first = { tween, timeline };
+        }
+        continue;
+      }
       if (first === null) first = { tween, timeline };
       if (kind === "keyframe" && now != null) {
         const start = typeof tween.startTime === "function" ? tween.startTime() : 0;
@@ -217,7 +251,7 @@ export function resolveRuntimeTween(
       }
     }
   }
-  return first;
+  return channelMatch ?? first;
 }
 
 /**

@@ -77,6 +77,10 @@ function patchSet(tween: RuntimeTween, props: SetPatchProps): boolean {
     const next = props[ch];
     if (next === undefined) continue;
     if (typeof next !== "number" || !Number.isFinite(next)) return false;
+    // A string value here is a dynamic/computed GSAP expression (e.g. "+=100",
+    // "random(...)"). Overwriting it with a plain number would silently drop the
+    // dynamic intent — decline so the caller soft-reloads from the (edited) source.
+    if (typeof vars[ch] === "string") return false;
     vars[ch] = next;
     touched = true;
   }
@@ -109,11 +113,22 @@ export function patchRuntimeTweenInPlace(
 ): boolean {
   if (!iframe) return false;
   try {
+    // For a `set` patch, hand the resolver the channels actually being written so
+    // it picks the set whose vars carry them — an element can have separate
+    // {x,y} and {rotation} sets, and a position patch must not corrupt the
+    // rotation set (channel-blind resolution would return the first match).
+    const channels =
+      change.kind === "set"
+        ? Object.keys(change.props).filter(
+            (k) => change.props[k as keyof SetPatchProps] !== undefined,
+          )
+        : undefined;
     const resolved = resolveRuntimeTween(
       iframe,
       selector,
       change.kind === "set" ? "set" : "keyframe",
       compositionId,
+      channels,
     );
     if (!resolved) return false;
     const { tween, timeline } = resolved;

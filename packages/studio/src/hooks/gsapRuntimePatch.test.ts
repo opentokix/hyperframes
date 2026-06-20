@@ -133,6 +133,64 @@ describe("patchRuntimeTweenInPlace — set tweens", () => {
   });
 });
 
+describe("patchRuntimeTweenInPlace — channel-aware set resolution", () => {
+  it("patches the {x,y} set, not a co-located rotation-only set", () => {
+    const el = { id: "dual" };
+    const posSet = makeTween({ vars: { x: 0, y: 0 }, targetIds: ["dual"], duration: 0 }, el);
+    const rotSet = makeTween({ vars: { rotation: 0 }, targetIds: ["dual"], duration: 0 }, el);
+    // rotation set listed FIRST — channel-blind resolution would grab it.
+    const { iframe } = fakeIframe(el, [rotSet, posSet]);
+
+    const ok = patchRuntimeTweenInPlace(iframe, "#dual", {
+      kind: "set",
+      props: { x: 33, y: 44 },
+    });
+
+    expect(ok).toBe(true);
+    expect(posSet.vars).toMatchObject({ x: 33, y: 44 });
+    // The rotation set must be untouched (no x/y written into it).
+    expect(rotSet.vars).toEqual({ rotation: 0 });
+    expect(rotSet.invalidate).not.toHaveBeenCalled();
+    expect(posSet.invalidate).toHaveBeenCalled();
+  });
+
+  it("patches the rotation set, not a co-located {x,y} set", () => {
+    const el = { id: "dual2" };
+    const posSet = makeTween({ vars: { x: 5, y: 6 }, targetIds: ["dual2"], duration: 0 }, el);
+    const rotSet = makeTween({ vars: { rotation: 0 }, targetIds: ["dual2"], duration: 0 }, el);
+    // position set listed FIRST.
+    const { iframe } = fakeIframe(el, [posSet, rotSet]);
+
+    const ok = patchRuntimeTweenInPlace(iframe, "#dual2", {
+      kind: "set",
+      props: { rotation: 90 },
+    });
+
+    expect(ok).toBe(true);
+    expect(rotSet.vars).toMatchObject({ rotation: 90 });
+    expect(posSet.vars).toEqual({ x: 5, y: 6 });
+    expect(posSet.invalidate).not.toHaveBeenCalled();
+    expect(rotSet.invalidate).toHaveBeenCalled();
+  });
+
+  it("falls back to the only set when none carries the requested channel", () => {
+    // Back-compat: a single {x,y} set, patched with {x,y} that obviously matches,
+    // plus a set lacking the channel entirely still resolves to a match. Here the
+    // only set carries opacity; patching opacity must still land on it.
+    const el = { id: "solo" };
+    const set = makeTween({ vars: { opacity: 1 }, targetIds: ["solo"], duration: 0 }, el);
+    const { iframe } = fakeIframe(el, [set]);
+
+    const ok = patchRuntimeTweenInPlace(iframe, "#solo", {
+      kind: "set",
+      props: { opacity: 0.5 },
+    });
+
+    expect(ok).toBe(true);
+    expect(set.vars).toMatchObject({ opacity: 0.5 });
+  });
+});
+
 describe("patchRuntimeTweenInPlace — keyframe tweens", () => {
   it("rebuilds the keyframes; a moved keyframe updates, others unchanged", () => {
     const el = { id: "puck" };
@@ -312,6 +370,28 @@ describe("patchRuntimeTweenInPlace — defensive false returns", () => {
       ],
     });
     expect(ok).toBe(false);
+  });
+
+  it("returns false rather than overwriting a dynamic string set value", () => {
+    // The existing set value is a computed GSAP expression ("+=100"). Patching it
+    // with a plain number would silently drop the dynamic intent → defer.
+    const el = { id: "expr" };
+    const setTween = makeTween(
+      { vars: { x: "+=100", y: 0 }, targetIds: ["expr"], duration: 0 },
+      el,
+    );
+    const { iframe, seek } = fakeIframe(el, [setTween]);
+
+    const ok = patchRuntimeTweenInPlace(iframe, "#expr", {
+      kind: "set",
+      props: { x: 50, y: 10 },
+    });
+
+    expect(ok).toBe(false);
+    // Declined → the dynamic expression survives, untouched.
+    expect(setTween.vars.x).toBe("+=100");
+    expect(setTween.invalidate).not.toHaveBeenCalled();
+    expect(seek).not.toHaveBeenCalled();
   });
 
   it("never throws — returns false on internal error", () => {
