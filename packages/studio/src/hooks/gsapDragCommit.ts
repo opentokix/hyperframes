@@ -10,7 +10,7 @@ import { resolveTweenStart, resolveTweenDuration } from "../utils/globalTimeComp
 import { roundTo3 } from "../utils/rounding";
 import { computeElementPercentage } from "./gsapShared";
 import { computeDraggedGsapPosition } from "./draggedGsapPosition";
-import type { RuntimeTweenChange } from "./gsapRuntimePatch";
+import type { RuntimeTweenChange, SetPatchProps } from "./gsapRuntimePatch";
 export interface GsapDragCommitCallbacks {
   commitMutation: (
     selection: DomEditSelection,
@@ -381,6 +381,37 @@ async function commitFlatViaKeyframes(
 // without importing the GSAP commit graph (store/runtime/core).
 export { computeDraggedGsapPosition };
 
+/** The shape of an `update-property` mutation a static-set nudge POSTs. */
+interface UpdatePropertyMutation {
+  type: "update-property";
+  animationId: string;
+  property: string;
+  value: number;
+}
+
+/**
+ * Build the `instantPatch` for a value-only `tl.set` from the SAME
+ * `update-property` mutation(s) that are POSTed — so the patch can never carry a
+ * value the source write didn't (one source of truth). Each mutation contributes
+ * its `{property: value}` channel to the patch's props.
+ */
+function setPatchFromUpdateProperties(
+  selector: string,
+  mutations: UpdatePropertyMutation[],
+): { selector: string; change: RuntimeTweenChange } {
+  const props: SetPatchProps = {};
+  for (const m of mutations) props[m.property as keyof SetPatchProps] = m.value;
+  return { selector, change: { kind: "set", props } };
+}
+
+/** Single-mutation convenience over {@link setPatchFromUpdateProperties}. */
+function setPatchFromUpdateProperty(
+  selector: string,
+  mutation: UpdatePropertyMutation,
+): { selector: string; change: RuntimeTweenChange } {
+  return setPatchFromUpdateProperties(selector, [mutation]);
+}
+
 /**
  * Find the studio position-hold `set` for a selector — a `tl.set("#el",{x,y})`
  * with no duration. This is what a static-element nudge writes/updates.
@@ -420,24 +451,41 @@ export async function commitStaticGsapPosition(
     // Update in place — two single-property mutations (the API updates one prop
     // per call). Coalesce them and reload only after the second lands.
     const coalesceKey = `gsap:set-nudge:${existingSet.id}`;
-    await callbacks.commitMutation(
-      selection,
-      { type: "update-property", animationId: existingSet.id, property: "x", value: newX },
-      { label: "Move layer", skipReload: true, coalesceKey },
-    );
-    await callbacks.commitMutation(
-      selection,
-      { type: "update-property", animationId: existingSet.id, property: "y", value: newY },
-      {
-        label: "Move layer",
-        softReload: true,
-        coalesceKey,
-        // Final commit of the coalesced x/y pair: carry the full {x,y} so the
-        // runtime `tl.set` is patched in place instantly (skips the soft reload
-        // when the helper can confidently apply it).
-        instantPatch: { selector, change: { kind: "set", props: { x: newX, y: newY } } },
-      },
-    );
+    // Build each mutation FIRST, then derive its instantPatch from the SAME
+    // object that's POSTed — so a future caller can't ship a clean mutation with
+    // a stale/malformed patch (the validated `value` flows straight into the
+    // patch). `findUnsafeMutationValues` validates the mutation upstream.
+    const xMutation = {
+      type: "update-property",
+      animationId: existingSet.id,
+      property: "x",
+      value: newX,
+    } as const;
+    const yMutation = {
+      type: "update-property",
+      animationId: existingSet.id,
+      property: "y",
+      value: newY,
+    } as const;
+    // Patch BOTH coalesced commits. If the SECOND POST fails server-side, the
+    // first (x) already persisted — patching its commit too means the live
+    // preview still reflects what DID persist. The x commit carries skipReload
+    // (no reload), so its instantPatch gives instant feedback without a reload;
+    // the y commit triggers the soft reload (skipped when the patch applies).
+    await callbacks.commitMutation(selection, xMutation, {
+      label: "Move layer",
+      skipReload: true,
+      coalesceKey,
+      instantPatch: setPatchFromUpdateProperty(selector, xMutation),
+    });
+    await callbacks.commitMutation(selection, yMutation, {
+      label: "Move layer",
+      softReload: true,
+      coalesceKey,
+      // Final commit of the coalesced x/y pair: carry both channels so the
+      // runtime `tl.set` lands the complete {x,y} pose in place.
+      instantPatch: setPatchFromUpdateProperties(selector, [xMutation, yMutation]),
+    });
     return;
   }
   await callbacks.commitMutation(
@@ -482,21 +530,21 @@ export async function commitStaticGsapRotation(
   callbacks: GsapDragCommitCallbacks,
 ): Promise<void> {
   if (existingSet) {
-    await callbacks.commitMutation(
-      selection,
-      {
-        type: "update-property",
-        animationId: existingSet.id,
-        property: "rotation",
-        value: newRotation,
-      },
-      {
-        label: "Rotate layer",
-        softReload: true,
-        // Value-only rotation set: patch the runtime `tl.set` rotation in place.
-        instantPatch: { selector, change: { kind: "set", props: { rotation: newRotation } } },
-      },
-    );
+    // Derive the instantPatch from the SAME mutation object that's POSTed (single
+    // source of truth — see commitStaticGsapPosition), so the validated `value`
+    // flows into the patch and the two can't drift.
+    const rotationMutation = {
+      type: "update-property",
+      animationId: existingSet.id,
+      property: "rotation",
+      value: newRotation,
+    } as const;
+    await callbacks.commitMutation(selection, rotationMutation, {
+      label: "Rotate layer",
+      softReload: true,
+      // Value-only rotation set: patch the runtime `tl.set` rotation in place.
+      instantPatch: setPatchFromUpdateProperty(selector, rotationMutation),
+    });
     return;
   }
   await callbacks.commitMutation(

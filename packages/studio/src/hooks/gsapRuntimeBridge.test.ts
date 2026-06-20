@@ -89,7 +89,7 @@ describe("tryGsapDragIntercept — stale-parse guard (no resurrection after dele
     expect(mutation.type).not.toBe("add-keyframe");
   });
 
-  it("forwards instantPatch {kind:set,x,y} on the final commit when updating an existing static set", async () => {
+  it("forwards instantPatch on BOTH coalesced commits when updating an existing static set", async () => {
     const commitMutation = vi.fn();
     const iframe = fakeIframe("puck-b", []); // runtime empty → STATIC path
     // An existing position-hold `set` for the selector → update-in-place (not add).
@@ -112,11 +112,15 @@ describe("tryGsapDragIntercept — stale-parse guard (no resurrection after dele
     );
 
     expect(handled).toBe(true);
-    // The coalesced update-property pair: the x commit is skipReload (no patch),
-    // the final y commit triggers the reload and carries the full {x,y} patch.
+    // The coalesced update-property pair both carry an instantPatch so a partial
+    // (second-POST) failure still leaves the preview patched for what persisted:
+    // the x commit patches {x}, the final y commit patches the full {x,y}.
     const updates = commitMutation.mock.calls.filter(([, m]) => m.type === "update-property");
     expect(updates).toHaveLength(2);
-    expect(updates[0][2].instantPatch).toBeUndefined();
+    expect(updates[0][2].instantPatch).toEqual({
+      selector: "#puck-b",
+      change: { kind: "set", props: { x: -50 } },
+    });
     expect(updates[1][2].instantPatch).toEqual({
       selector: "#puck-b",
       change: { kind: "set", props: { x: -50, y: 30 } },

@@ -275,7 +275,7 @@ const existingRotationSet = (): GsapAnimation =>
 describe("commitStaticGsapPosition — instantPatch (value-only set)", () => {
   beforeEach(() => usePlayerStore.setState({ currentTime: 0, activeKeyframePct: null }));
 
-  it("attaches instantPatch {kind:set, props:{x,y}} to the FINAL coalesced commit only", async () => {
+  it("attaches an instantPatch to BOTH coalesced commits, each derived from its own mutation", async () => {
     const { commits, callbacks } = optionRecordingCallbacks();
 
     await commitStaticGsapPosition(
@@ -288,15 +288,48 @@ describe("commitStaticGsapPosition — instantPatch (value-only set)", () => {
     );
 
     expect(commits).toHaveLength(2);
-    // First (x) commit is the intermediate skipReload one — NO instantPatch.
+    // First (x) commit is the intermediate skipReload one — it now carries an
+    // instantPatch for just {x}, so if the SECOND POST fails the preview still
+    // reflects the x that DID persist (no reload, instant feedback).
     expect(commits[0].options.skipReload).toBe(true);
-    expect(commits[0].options.instantPatch).toBeUndefined();
+    expect(commits[0].options.instantPatch).toEqual({
+      selector: "#puck-a",
+      change: { kind: "set", props: { x: -50 } },
+    });
     // Final (y) commit triggers the reload and carries the full {x,y} patch.
     expect(commits[1].options.softReload).toBe(true);
     expect(commits[1].options.instantPatch).toEqual({
       selector: "#puck-a",
       change: { kind: "set", props: { x: -50, y: 30 } },
     });
+  });
+
+  it("derives each instantPatch's props from the value in the SAME mutation that's POSTed", async () => {
+    const { commits, callbacks } = optionRecordingCallbacks();
+
+    await commitStaticGsapPosition(
+      selection(),
+      { x: -50, y: 30 },
+      { x: 0, y: 0 },
+      "#puck-a",
+      existingPositionSet(),
+      callbacks,
+    );
+
+    // The patch values must equal the mutation values — they're read out of the
+    // same object, so a clean mutation can't ship alongside a stale patch.
+    const xMutation = commits[0].mutation as { property: string; value: number };
+    const yMutation = commits[1].mutation as { property: string; value: number };
+    const xPatch = commits[0].options.instantPatch as {
+      change: { props: Record<string, number> };
+    };
+    const yPatch = commits[1].options.instantPatch as {
+      change: { props: Record<string, number> };
+    };
+    expect(xPatch.change.props[xMutation.property]).toBe(xMutation.value);
+    expect(yPatch.change.props[yMutation.property]).toBe(yMutation.value);
+    // The y commit's combined patch also carries the x mutation's value.
+    expect(yPatch.change.props[xMutation.property]).toBe(xMutation.value);
   });
 
   it("does NOT attach instantPatch when ADDING a new set (structural — new tween)", async () => {
@@ -331,6 +364,12 @@ describe("commitStaticGsapRotation — instantPatch (value-only set)", () => {
       selector: "#puck-a",
       change: { kind: "set", props: { rotation: 42 } },
     });
+    // Patch value derived from the SAME mutation that's POSTed (one source).
+    const m = commits[0].mutation as { property: string; value: number };
+    const patch = commits[0].options.instantPatch as {
+      change: { props: Record<string, number> };
+    };
+    expect(patch.change.props[m.property]).toBe(m.value);
   });
 
   it("does NOT attach instantPatch when ADDING a new rotation set (structural)", async () => {

@@ -68,7 +68,12 @@ export function applyPreviewSync(
     // Fall through to the soft/full reload path below.
   }
   if (options.softReload && result.scriptText) {
-    if (!applySoftReload(iframe, result.scriptText)) reloadPreview();
+    // Per U4, do NOT escalate on the synchronous `false` return (it means
+    // "soft-reload couldn't run; the value is unchanged on screen, not broken"
+    // — a full reload would re-flash the WebGL context for nothing). Only the
+    // async MotionPath-plugin load failure escalates, via `onAsyncFailure`,
+    // which fires after a soft reload that already returned true optimistically.
+    applySoftReload(iframe, result.scriptText, reloadPreview);
   } else {
     reloadPreview();
   }

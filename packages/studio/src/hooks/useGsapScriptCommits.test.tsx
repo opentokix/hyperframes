@@ -63,7 +63,7 @@ describe("applyPreviewSync", () => {
     expect(reloadPreview).not.toHaveBeenCalled();
   });
 
-  it("instantPatch + patch fails: falls back to the soft reload", () => {
+  it("instantPatch + patch fails: falls back to the soft reload, passing onAsyncFailure", () => {
     patchRuntimeTweenInPlace.mockReturnValue(false);
     applySoftReload.mockReturnValue(true);
     const reloadPreview = vi.fn();
@@ -79,11 +79,13 @@ describe("applyPreviewSync", () => {
       reloadPreview,
     );
 
-    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT");
+    // reloadPreview is wired as onAsyncFailure (3rd arg) so a MotionPath-plugin
+    // CDN load failure escalates to a full reload — but it is NOT called eagerly.
+    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT", reloadPreview);
     expect(reloadPreview).not.toHaveBeenCalled();
   });
 
-  it("instantPatch + patch fails + soft reload fails: escalates to full reload", () => {
+  it("instantPatch + patch fails + soft reload returns false: does NOT sync-escalate (U4)", () => {
     patchRuntimeTweenInPlace.mockReturnValue(false);
     applySoftReload.mockReturnValue(false);
     const reloadPreview = vi.fn();
@@ -99,10 +101,13 @@ describe("applyPreviewSync", () => {
       reloadPreview,
     );
 
-    expect(reloadPreview).toHaveBeenCalledTimes(1);
+    // U4: the synchronous false return means the soft reload couldn't run, NOT
+    // that the preview is broken — escalation happens only via onAsyncFailure.
+    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT", reloadPreview);
+    expect(reloadPreview).not.toHaveBeenCalled();
   });
 
-  it("no instantPatch + softReload + scriptText: soft reloads (today's behavior)", () => {
+  it("no instantPatch + softReload + scriptText: soft reloads, passing onAsyncFailure", () => {
     applySoftReload.mockReturnValue(true);
     const reloadPreview = vi.fn();
 
@@ -114,11 +119,11 @@ describe("applyPreviewSync", () => {
     );
 
     expect(patchRuntimeTweenInPlace).not.toHaveBeenCalled();
-    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT");
+    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT", reloadPreview);
     expect(reloadPreview).not.toHaveBeenCalled();
   });
 
-  it("no instantPatch + softReload that fails: full reload (today's behavior)", () => {
+  it("no instantPatch + softReload that returns false: does NOT sync-escalate (U4)", () => {
     applySoftReload.mockReturnValue(false);
     const reloadPreview = vi.fn();
 
@@ -129,7 +134,9 @@ describe("applyPreviewSync", () => {
       reloadPreview,
     );
 
-    expect(reloadPreview).toHaveBeenCalledTimes(1);
+    // onAsyncFailure is wired, but the sync false return does not trigger it.
+    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT", reloadPreview);
+    expect(reloadPreview).not.toHaveBeenCalled();
   });
 
   it("no instantPatch + no softReload: full reload (today's behavior)", () => {
@@ -264,7 +271,7 @@ describe("runCommit — instantPatch wiring", () => {
     });
 
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT");
+    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT", deps.reloadPreview);
     expect(deps.reloadPreview).not.toHaveBeenCalled();
     expect(deps.onCacheInvalidate).toHaveBeenCalledTimes(1);
   });
@@ -279,7 +286,7 @@ describe("runCommit — instantPatch wiring", () => {
     });
 
     expect(patchRuntimeTweenInPlace).not.toHaveBeenCalled();
-    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT");
+    expect(applySoftReload).toHaveBeenCalledWith(FAKE_IFRAME, "SCRIPT", deps.reloadPreview);
     expect(deps.reloadPreview).not.toHaveBeenCalled();
   });
 });
