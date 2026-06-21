@@ -14,9 +14,22 @@
 //
 //   node captions.mjs build --storyboard ./STORYBOARD.md --audio-meta ./audio_meta.json --hyperframes . --out ./caption_groups.json
 //
+// CAPTION LOOK — two sources, picked automatically:
+//   1. PRESET SKIN (preferred). If a project-local `caption-skin.html` exists (Step 2
+//      copies the chosen frame-preset's skin into the project), it is the caption look.
+//      It is a brand-token-strict skin with three reserved holes; this script fills them
+//      and wraps the result in a <template> for the engine:
+//        - `var GROUPS = [];`            → the computed caption groups
+//        - `var DURATION = 0;` + data-duration="0" (and data-width/height="0") → real values
+//        - `<style data-brand-tokens></style>` → :root tokens derived from the project's
+//          frame.md (colors + fonts), mapped to a fixed semantic vocab every skin shares:
+//          --cap-ink / --cap-canvas / --cap-accent / --cap-accent-2 / --font-display /
+//          --font-body, plus --cap-band-top / --cap-band-height (the keep-out band).
+//      So the brand-token overlay from Step 2 flows into the captions automatically.
+//   2. DEFAULT (fallback). No skin file → the built-in Roboto/black pill (buildCaptionsHtml).
+//
 // Grouping mirrors the proven heuristics (frame boundary · sentence-end punct ·
-// silence gap · density-aware word cap) but is rewritten for the new inputs (no
-// group_spec / no whisper pass — word timings come inline from audio_meta).
+// silence gap · density-aware word cap); word timings come inline from audio_meta.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -54,6 +67,8 @@ function runBuild(argv) {
   const outPath = resolve(flag(argv, "out", join(hyperframesDir, "caption_groups.json")));
   const htmlPath = join(hyperframesDir, "compositions/captions.html");
   const overridesPath = join(hyperframesDir, "caption-overrides.json");
+  const skinPath = resolve(flag(argv, "skin", join(hyperframesDir, "caption-skin.html")));
+  const framePath = resolve(flag(argv, "frame", join(hyperframesDir, "frame.md")));
 
   if (!existsSync(storyboardPath)) die(`STORYBOARD.md not found at ${storyboardPath}`);
   const manifest = parseStoryboard(readFileSync(storyboardPath, "utf8"));
@@ -146,18 +161,142 @@ function runBuild(argv) {
     JSON.stringify({ total_duration_s: total, width: W, height: H, groups: finalized }, null, 2),
   );
 
-  // ── write compositions/captions.html ──
+  // ── write compositions/captions.html (preset skin if present, else default) ──
   mkdirSync(dirname(htmlPath), { recursive: true });
-  writeFileSync(htmlPath, buildCaptionsHtml(finalized, total, W, H));
+  let source;
+  if (existsSync(skinPath)) {
+    const tokens = frameTokensCss(framePath, H);
+    writeFileSync(htmlPath, buildFromSkin(readFileSync(skinPath, "utf8"), finalized, total, W, H, tokens, die));
+    source = `preset skin (${skinPath.replace(hyperframesDir + "/", "")})`;
+  } else {
+    writeFileSync(htmlPath, buildCaptionsHtml(finalized, total, W, H));
+    source = "default (built-in pill)";
+  }
 
   // ── write caption-overrides.json shim ──
   if (!existsSync(overridesPath)) writeFileSync(overridesPath, "[]\n");
 
   console.log(
-    `✓ captions build: ${finalized.length} group(s) from ${words.length} words → compositions/captions.html (total ${total}s)`,
+    `✓ captions build: ${finalized.length} group(s) from ${words.length} words → compositions/captions.html (total ${total}s) · skin: ${source}`,
   );
 }
 
+// ── preset-skin path ────────────────────────────────────────────────────────
+// Fill the skin's three reserved holes + the root's 0-placeholders, then wrap the
+// fragment in a <template> (the engine clones template contents only). One generic
+// fill works for every preset's skin — no per-skin transform.
+function buildFromSkin(skin, groups, total, W, H, tokens, die) {
+  const fillOnce = (src, re, repl, label) => {
+    const n = (src.match(re) || []).length;
+    if (n !== 1) die(`caption-skin.html: expected exactly one ${label}, found ${n}`);
+    return src.replace(re, () => repl);
+  };
+  let out = skin;
+  out = fillOnce(out, /<style data-brand-tokens>\s*<\/style>/, `<style data-brand-tokens>\n${tokens}\n    </style>`, "<style data-brand-tokens></style> hole");
+  out = fillOnce(out, /var GROUPS = \[\];/, `var GROUPS = ${JSON.stringify(groups)};`, "`var GROUPS = [];` hole");
+  out = fillOnce(out, /var DURATION = 0;/, `var DURATION = ${total};`, "`var DURATION = 0;` hole");
+  out = fillOnce(out, /data-duration="0"/, `data-duration="${total}"`, '`data-duration="0"` hole');
+  out = fillOnce(out, /data-width="0"/, `data-width="${W}"`, '`data-width="0"` hole');
+  out = fillOnce(out, /data-height="0"/, `data-height="${H}"`, '`data-height="0"` hole');
+  return `<template id="captions-template">\n${out.trim()}\n</template>\n`;
+}
+
+// frame.md colors:/typography: → a :root token block, mapped to the fixed semantic
+// vocab every preset skin references. Robust to per-preset key names: colors are
+// matched by name, then by luminance. Brand-token overlay (Step 2) flows through
+// because the values come from the project's frame.md. No frame.md → band vars only.
+function frameTokensCss(framePath, H) {
+  const band = captionBand(H);
+  const out = [];
+  if (existsSync(framePath)) {
+    const md = readFileSync(framePath, "utf8");
+    const colors = parseColors(md);
+    for (const [k, v] of colors) out.push(`      --${k}: ${v};`); // raw, for completeness
+    const sem = semanticColors(colors);
+    if (sem.ink) out.push(`      --cap-ink: ${sem.ink};`);
+    if (sem.canvas) out.push(`      --cap-canvas: ${sem.canvas};`);
+    if (sem.accent) out.push(`      --cap-accent: ${sem.accent};`);
+    if (sem.accent2) out.push(`      --cap-accent-2: ${sem.accent2};`);
+    const { display, body } = parseFonts(md);
+    if (display) out.push(`      --font-display: ${display}, system-ui, serif;`);
+    if (body) out.push(`      --font-body: ${body}, system-ui, sans-serif;`);
+  }
+  out.push(`      --cap-band-top: ${band.bandTopY}px;`);
+  out.push(`      --cap-band-height: ${band.bandHeight}px;`);
+  return `      :root {\n${out.join("\n")}\n      }`;
+}
+
+// Collect `key: value` pairs under the top-level `colors:` block (until dedent).
+function parseColors(md) {
+  const out = [];
+  let inBlock = false;
+  for (const line of md.split(/\r?\n/)) {
+    if (/^colors:\s*$/.test(line)) {
+      inBlock = true;
+      continue;
+    }
+    if (!inBlock) continue;
+    if (/^\S/.test(line)) break; // dedent to a top-level key → end of block
+    const m = line.match(/^\s+([\w-]+):\s*["']?(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|[^"'#\s][^"'\n]*?)["']?\s*$/);
+    if (m) out.push([m[1], m[2].trim()]);
+  }
+  return out;
+}
+
+// relative luminance of a #rrggbb (null for non-hex like rgba()).
+function lum(v) {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(String(v).trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+}
+
+// Map a preset's colors to the fixed semantic vocab. ink = a dark/ink-named color
+// (else darkest); canvas = a paper/cream/white-named color (else lightest); accents
+// = whatever's left, in declaration order.
+function semanticColors(colors) {
+  if (!colors.length) return {};
+  const named = (re) => colors.find(([k]) => re.test(k));
+  const hexes = colors.filter(([, v]) => lum(v) != null);
+  const byLum = [...hexes].sort((a, b) => (lum(a[1]) ?? 1e9) - (lum(b[1]) ?? 1e9));
+  const pick = (m, fallback) => (m ? m[1] : fallback ? fallback[1] : undefined);
+  const ink = pick(named(/ink|black|charcoal|^text$|outline|noir/i), byLum[0] ?? colors[0]);
+  const canvas = pick(
+    named(/cream|paper|canvas|white|bg|ground|surface|base|sand|parchment|off-?white|bone/i),
+    byLum[byLum.length - 1] ?? colors[colors.length - 1],
+  );
+  const accents = colors.map(([, v]) => v).filter((v) => v !== ink && v !== canvas);
+  return { ink, canvas, accent: accents[0] ?? ink, accent2: accents[1] ?? accents[0] ?? ink };
+}
+
+// Collect role→fontFamily under the top-level `typography:` block; pick a display
+// + body family from the usual role names.
+function parseFonts(md) {
+  const roles = {};
+  let inBlock = false;
+  for (const line of md.split(/\r?\n/)) {
+    if (/^typography:\s*$/.test(line)) {
+      inBlock = true;
+      continue;
+    }
+    if (!inBlock) continue;
+    if (/^\S/.test(line)) break;
+    const m = line.match(/^\s+([\w-]+):\s*\{[^}]*fontFamily:\s*"([^"]+)"/);
+    if (m) roles[m[1]] = m[2];
+  }
+  const q = (s) => (s ? `"${s}"` : null);
+  const body = roles.body ?? roles.subtitle ?? Object.values(roles)[0];
+  const display =
+    roles.display ??
+    roles.headline ??
+    roles["card-headline"] ??
+    roles["section-headline"] ??
+    roles["quote-display"] ??
+    body;
+  return { display: q(display), body: q(body) };
+}
+
+// ── default path (no preset skin) ─────────────────────────────────────────────
 // Self-contained captions sub-composition. The <template> holds the band container
 // + style AND the <script> (the HyperFrames loader only executes scripts INSIDE the
 // cloned template — a sibling <script> after </template> never runs, so the timeline

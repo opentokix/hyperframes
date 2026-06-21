@@ -37,16 +37,11 @@
 // frames, a built/animated frame missing its src/file, a frame with no
 // duration, an inner data-composition-id mismatch). No backstop: fix upstream.
 
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { parseStoryboard } from "./lib/storyboard.mjs";
 import { parseFormat } from "./lib/dimensions.mjs";
+import { stageAssets } from "./lib/assets.mjs";
 
 // ---------- argv ----------
 const argv = process.argv.slice(2);
@@ -87,19 +82,25 @@ for (const f of manifest.frames) {
   }
   const compAbs = join(hyperframesDir, f.src);
   if (!existsSync(compAbs)) {
-    if (built) die(`${label} is ${f.status} but its src ${f.src} is not on disk — re-dispatch the worker`);
+    if (built)
+      die(`${label} is ${f.status} but its src ${f.src} is not on disk — re-dispatch the worker`);
     anomalies.push(`${label}: src ${f.src} not on disk (status ${f.status}) — skipped`);
     continue;
   }
   if (!Number.isFinite(f.durationSeconds) || f.durationSeconds <= 0) {
-    die(`${label}: no positive duration (got ${JSON.stringify(f.duration)}) — run audio sync-durations`);
+    die(
+      `${label}: no positive duration (got ${JSON.stringify(f.duration)}) — run audio sync-durations`,
+    );
   }
   // Host data-composition-id MUST equal the inner file's, or the runtime never
   // finds the timeline. frame_id = src basename (frame-worker contract); verify
   // the inner html actually declares it.
   const compId = basename(f.src).replace(/\.html?$/i, "");
   const html = readFileSync(compAbs, "utf8");
-  if (!html.includes(`data-composition-id="${compId}"`) && !html.includes(`data-composition-id='${compId}'`)) {
+  if (
+    !html.includes(`data-composition-id="${compId}"`) &&
+    !html.includes(`data-composition-id='${compId}'`)
+  ) {
     die(`${label}: ${f.src} has no data-composition-id="${compId}" (host/inner id must match)`);
   }
   mounted.push({ frame: f, compId, durationSeconds: r3(f.durationSeconds) });
@@ -242,45 +243,19 @@ audio.sfx.forEach((cue, i) => {
   sfxEmitted++;
 });
 
-// ---------- stage frame-named assets: capture/{assets,assets/videos,screenshots} → public/ ----------
-// Only assets a frame named in `asset_candidates` are staged (unnamed assets
-// never reach the project). Value form: "public/<basename> — desc; public/… — …".
-function basenamesFromCandidates(value) {
-  if (typeof value !== "string") return [];
-  return value
-    .split(";")
-    .map((seg) => seg.split(/\s+[—–-]\s+/)[0].trim()) // strip the " — description"
-    .filter(Boolean)
-    .map((p) => basename(p.replace(/^public\//, "")));
-}
-const wanted = new Set();
-for (const f of manifest.frames) {
-  for (const b of basenamesFromCandidates(f.extra?.asset_candidates)) wanted.add(b);
-}
-const captureDirs = [
-  join(hyperframesDir, "capture/assets"),
-  join(hyperframesDir, "capture/assets/videos"), // videos download into a subdir
-  join(hyperframesDir, "capture/screenshots"),
-];
-const publicDir = join(hyperframesDir, "public");
-let staged = 0;
-if (wanted.size > 0) {
-  mkdirSync(publicDir, { recursive: true });
-  for (const b of wanted) {
-    const dest = join(publicDir, b);
-    if (existsSync(dest)) {
-      staged++;
-      continue;
-    } // first-wins / already staged
-    const src = captureDirs.map((d) => join(d, b)).find((p) => existsSync(p));
-    if (src) {
-      copyFileSync(src, dest);
-      staged++;
-    } else {
-      anomalies.push(`asset "${b}" named by a frame but not found under capture/ — frame will 404 it`);
-    }
-  }
-}
+// ---------- stage frame-named assets: capture/ → public/ (idempotent backstop) ----------
+// Frame workers + the live preview reference public/<basename>; stage-assets.mjs
+// already ran this at Step 4 close. Re-run as a backstop so a late-named asset
+// still lands. Shared logic: lib/assets.mjs (first-wins, safe to call twice).
+const {
+  staged,
+  wanted,
+  anomalies: assetAnomalies,
+} = stageAssets({
+  hyperframesDir,
+  frames: manifest.frames,
+});
+for (const a of assetAnomalies) anomalies.push(a);
 
 // ---------- <head> ----------
 const headStyle = [

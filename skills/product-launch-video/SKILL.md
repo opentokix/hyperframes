@@ -5,241 +5,167 @@ description: "turn a product or marketing URL, pasted script, or brief into a pr
 
 # Product Launch to HyperFrames
 
-Capture a product, understand its brand, plan a launch video, and build the video frame by frame in HyperFrames.
+Use this skill to capture a product, understand its brand, plan a launch video, and build it frame by frame in HyperFrames.
 
 > **Confirm the route before Step 0.** You are the orchestrator. Run each step, verify its gate, and only then continue to the next step. This skill is for a **product being marketed, launched, promoted, or revealed**, including requests such as "promo for our site" when the purpose is promotional. Route other intents elsewhere: a general non-launch website tour -> `/website-to-video`; a topic explainer with no product -> `/faceless-explainer`; a GitHub PR -> `/pr-to-video`; captions on existing footage -> `/embedded-captions`; a short unnarrated motion graphic -> `/motion-graphics`. If the user says only "make a video" or the route is uncertain, read `/hyperframes` first.
 
-Users may say things like:
+You are the orchestrator. Work in `videos/<project>/`. Run steps in order and pass each gate before continuing. User-gated steps are Step 0, Step 3, and Step 6. Do every step yourself except Step 5, where you dispatch one sub-agent per frame. Do not put design or motion rules here; those live in the frame-worker sub-agent, `hyperframes-creative`, and `hyperframes-animation`.
 
-- "Make a 60-second launch video for our SaaS at https://..."
-- "Turn this script into a product promo, vertical for TikTok."
-- "Feature reveal for X.com -- punchy, about 30 seconds."
-
-All paths are relative to the project root `videos/<project>/`. The workflow has seven main steps, plus Step 3.1 for audio. Each step produces an artifact that gates the next step. User-gated steps require stopping to ask the user or obtain approval before continuing. You perform every step yourself except frame construction: Step 5 dispatches one sub-agent per frame. TTS, transcription, BGM, captions, transitions, and index assembly run through scripts. Do not add design or motion rules to this file; those rules live in the frame-worker sub-agent and in the `hyperframes-creative` and `hyperframes-animation` references it reads.
-
-| #   | Step                               | Artifact                                       |
-| --- | ---------------------------------- | ---------------------------------------------- |
-| 0   | Setup and brief (user-gated)       | `hyperframes.json`                             |
-| 1   | Capture assets                     | `capture/`                                     |
-| 2   | Design system                      | `frame.md`                                     |
-| 3   | Storyboard and script (user-gated) | `STORYBOARD.md` + `SCRIPT.md`                  |
-| 3.1 | Audio                              | `audio_meta.json`                              |
-| 4   | Frame visual design                | enriched `STORYBOARD.md`                       |
-| 5   | Build frames                       | `compositions/frames/NN-*.html` + `index.html` |
-| 6   | Finalize                           | `renders/video.mp4`                            |
+Workflow: Step 0 setup -> `hyperframes.json`; Step 1 capture -> `capture/`; Step 2 design system -> `frame.md`; Step 3 storyboard/script -> `STORYBOARD.md` and `SCRIPT.md`; Step 3.1 audio -> `audio_meta.json`; Step 4 visual design -> enriched `STORYBOARD.md`; Step 5 frames -> `compositions/frames/NN-*.html` and `index.html`; Step 6 final render -> `renders/video.mp4`.
 
 ---
 
 ## Step 0: Setup and Brief
 
-Define the video brief and initialize the HyperFrames project when needed.
+Goal: Lock the core video brief and create the HyperFrames project if needed.
 
-Confirm the brief in **one** message, leading with a recommended default and skipping anything the user already specified:
+Initialize only if `hyperframes.json` is missing. Name `<project>` from the brand or domain in kebab-case, such as `acme-promo`; never use workspace name or timestamp.
 
-- **Angle:** whole product, one feature, or a specific offer.
-- **Length:** default to about 30-90 seconds; allow up to about 3 minutes.
-- **Aspect ratio:** default to 16:9; use 9:16 for vertical social video when requested.
-- **Language:** match the user unless they specify otherwise.
+`npx hyperframes init "videos/<project>" --non-interactive --skip-skills --example=blank`
 
-If the user's request already specifies these details, do not ask again.
-
-Initialize only when `hyperframes.json` is absent. Name `<project>` in kebab-case from the brand or domain, such as `acme-promo`. Never use the workspace basename or a timestamp as the project name.
-
-```bash
-npx hyperframes init "videos/<project>" --non-interactive --skip-skills --example=blank
-```
-
-**Gate:** `hyperframes.json` exists, and the angle, length, aspect ratio, and language are locked.
+**Gate:** `hyperframes.json` exists, and angle, length, aspect ratio, and language are locked.
 
 ---
 
 ## Step 1: Capture assets
 
-Classify the input, run the matching path, then read the extracted data to understand the **brand** — what it does, who it's for, its voice and mood.
+Goal: Collect the source material, brand signals, and usable assets for the video.
 
-| Input                 | Path                                                                                                                                                                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Explicit URL          | Capture it; narration comes from the site.                                                                                                                                                                                                |
-| Pasted script / brief | Save verbatim to `user_script.txt`; **ask once** "use it verbatim or restructure?" → `VO_MODE`; resolve a capture target (URL in text → use it; named brand → `WebSearch`, confirm the URL in one line before crawling; else no capture). |
+Classify the input and choose the path. Explicit URL -> capture it and use the site for narration and assets. Pasted script/brief -> save verbatim as `user_script.txt`, ask once "use it verbatim or restructure?", store answer as `VO_MODE`, then resolve capture target: URL in text -> use it; brand name only -> `WebSearch`, confirm URL in one line, then crawl; no URL/site -> no-capture path.
 
-**Vision key (optional).** With `GEMINI_API_KEY` / `GOOGLE_API_KEY` (or OpenRouter) set, the crawl auto-captions every asset (and rasterized SVGs) into `asset-descriptions.md` for Step 3 to pick from; without one it falls back to DOM context. It runs automatically inside the CLI — not a review gate. Optionally suggest the user set one for better asset selection (~$0.001 per image; free key at ai.google.dev → add to `.env`).
+Run capture with: `npx hyperframes capture "<URL>" -o ./capture`
 
-```bash
-npx hyperframes capture "<URL>" -o ./capture   # CLI crawl
-```
+If `GEMINI_API_KEY`, `GOOGLE_API_KEY`, or an OpenRouter key exists, capture auto-captions assets into `capture/extracted/asset-descriptions.md`. This is not a review gate. Without a vision key, use DOM context and continue.
 
-**No capture** (script/brief only, no site to crawl) → write, by hand, the two files the later steps still read: `capture/extracted/tokens.json` (brand tokens — `{ title, description, colors: [], fonts: [] }`; empty colors/fonts tell Step 2 to color the preset from the brief) and `capture/extracted/visible-text.txt` (the full brief — Step 3's narration source). Steps 2–6 then run exactly as they would after a real capture.
+No-capture path: create `capture/extracted/tokens.json`, `capture/extracted/visible-text.txt`, `capture/extracted/asset-descriptions.md`, and `capture/assets/` by hand. `tokens.json` should be `{ "title": "", "description": "", "colors": [], "fonts": [] }`; fill title/description from the brief when possible. `visible-text.txt` contains the full brief or script. `asset-descriptions.md` should say no assets were captured unless the user gave asset notes.
 
-**Gate:** `capture/extracted/tokens.json`, `capture/extracted/visible-text.txt`, `capture/extracted/asset-descriptions.md`, and `capture/assets/` exist, and you can state the brand in one line. Treat `asset-descriptions.md` as the canonical asset inventory for later planning. If it is missing after a real capture, stop and report capture incomplete. If `capture/BLOCKED.md` exists, follow it.
+**Gate:** `capture/extracted/tokens.json`, `capture/extracted/visible-text.txt`, `capture/extracted/asset-descriptions.md`, and `capture/assets/` exist; you can state the brand in one clear sentence. Treat `asset-descriptions.md` as the main asset inventory. If it is missing after real capture, stop and report capture incomplete. If `capture/BLOCKED.md` exists, follow it.
 
 ---
 
 ## Step 2: Design System
 
-Adopt one shipped **frame preset** and overlay the brand tokens to produce `frame.md`, this video's design system.
+Goal: Choose one shipped frame preset and turn it into this video's `frame.md`.
 
-**Read** the `hyperframes-creative` design spec — `[../hyperframes-creative/references/design-spec.md](../hyperframes-creative/references/design-spec.md)` — for the available presets and the `frame.md` format. Pick a preset, copy its `FRAME.md` to the project root as `frame.md`, and overlay the brand tokens (change only `colors:` and `typography:`; keep its structure, geometry, and components). Don't invent a bespoke system — cross-frame consistency and the build contract depend on a shipped preset.
+Create `frame.md` from one shipped frame preset. Read `../hyperframes-creative/references/design-spec.md` for available presets and the `frame.md` format. Pick a preset, copy its `FRAME.md` to project root as `frame.md`, then overlay brand tokens by changing only `colors:` and `typography:`. Keep the preset's structure, geometry, and components. Do not invent a custom design system.
 
-No site captured, or the brief lacks brand info? Use the user's `design.md` if they have one; otherwise ask once for a logo, brand colors, font direction, or a visual reference before writing `frame.md`.
+If no site was captured or the brief lacks brand style, use the user's `design.md` if present. Otherwise ask once for a logo, brand colors, font direction, or a visual reference.
 
-**Gate:** `frame.md` exists, derives from a named shipped preset, and carries the brand tokens overlaid onto it — not an invented design system.
+**Gate:** `frame.md` exists, comes from a named shipped preset, and has brand colors and typography applied.
 
 ---
 
 ## Step 3: Storyboard and Script
 
-Create the narrative plan for the video.
+Goal: Turn the brief and captured material into an approved frame-by-frame story plan.
 
-Use the approved brief and captured brand material to write:
+Read `references/story-design.md`, `../hyperframes-core/references/storyboard-format.md`, and `../hyperframes-core/references/script-format.md`. Use them to write `STORYBOARD.md` and, when narration is needed, `SCRIPT.md`.
 
-- `STORYBOARD.md` — the concept-first narrative skeleton
-- `SCRIPT.md` — the final locked script, only when narration is required
+Use `story-design.md` for story archetype, hook, persuasion logic, beats, `VO_MODE`, and asset choices. Choose each visual frame's `asset_candidates` from `capture/extracted/asset-descriptions.md` (the canonical inventory) — don't browse raw `capture/assets/`. Do not ask the user to pick assets unless that inventory is missing or unusable. Use the exact required fields from the storyboard and script references.
 
-Before writing, read:
+After drafting, show a frame-by-frame summary and iterate until the user approves. After approval, offer live preview once: `npx hyperframes preview`. Open preview only if the user asks, and remember that choice for Step 6.
 
-- `references/story-design.md`
-- `../hyperframes-core/references/storyboard-format.md`
-- `../hyperframes-core/references/script-format.md`
-
-Use `story-design.md` for the product-launch story method, including archetypes, hooks, persuasion logic, beats, `VO_MODE`, and `asset_candidates`.
-
-Inspect `capture/` yourself and choose the `asset_candidates` for each visual frame. Do not ask the user to pick assets unless the captured material is missing or unusable.
-
-Write the storyboard and script using the exact required fields from the format references.
-
-After drafting, show the user a frame-by-frame summary. Iterate until the user approves the plan.
-
-**Gate:** `STORYBOARD.md` exists, every visual frame has `asset_candidates`, `SCRIPT.md` exists when narration is required, and the user has approved the frame-by-frame plan.
+**Gate:** `STORYBOARD.md` exists, every visual frame has `asset_candidates`, `SCRIPT.md` exists when narration is needed, and the user approved the frame-by-frame plan.
 
 ---
 
 ## Step 3.1: Audio
 
-Generate narration, word timings, and background music from the approved script while visual design proceeds.
+Goal: Generate narration, word timings, music, and audio metadata from the approved script.
 
-Start the audio job after Step 3 approval. Run it in the background, then proceed to Step 4 while it works.
+Start audio after Step 3 approval. Run it in the background, then continue to Step 4.
 
-```bash
-node <SKILL_DIR>/scripts/audio.mjs --script ./SCRIPT.md --storyboard ./STORYBOARD.md --hyperframes . --out ./audio_meta.json &
-```
+`node <SKILL_DIR>/scripts/audio.mjs --script ./SCRIPT.md --storyboard ./STORYBOARD.md --hyperframes . --out ./audio_meta.json &`
 
-The audio script synthesizes locked narration, captures word timings, and retrieves a BGM track from HeyGen's music library based on the storyboard's `music:` mood. This uses the HeyGen Audio API for retrieval, not generation, and uses the same `~/.heygen` credential as TTS. For voice provider details, read `[../hyperframes-media/references/tts.md](../hyperframes-media/references/tts.md)`.
+The audio script handles narration, word timings, BGM lookup from HeyGen's music library, and timing metadata. BGM mood comes from the storyboard's `music:` field. This uses the HeyGen Audio API for retrieval, not generation, and uses the same `~/.heygen` credential as TTS. For provider details, read `../hyperframes-media/references/tts.md`.
 
-If there is no narration and no `SCRIPT.md`, skip voice generation. BGM may still run when the storyboard specifies a music mood.
+If there is no narration and no `SCRIPT.md`, skip voice generation. BGM may still run if the storyboard has a music mood.
 
-**Gate:** the audio job has started, or the project is explicitly marked silent.
+**Gate:** audio job has started, or the project is marked silent.
 
 ---
 
 ## Step 4: Frame Visual Design
 
-Add the visual and motion design layer to the storyboard.
+Goal: Add the visual direction, layout intent, and motion choices to each storyboard frame.
 
-Edit `STORYBOARD.md` in place. Do not create a new storyboard file.
+Edit `STORYBOARD.md` in place. Do not create another storyboard. Use `frame.md` as source of truth for color, type, layout feel, and style.
 
-Use `frame.md` as the source of truth for color, typography, and overall visual style.
+Read `references/visual-design.md`, `references/composition.md`, `references/motion-language.md`, and `../hyperframes-animation/`. Use `visual-design.md` for required frame fields and the required `## Video direction` block. Use `composition.md` for layout, hierarchy, focal points, and visual roles. Use `motion-language.md` and `../hyperframes-animation/` for valid effects and blueprint IDs. Do not invent effect names or blueprint IDs.
 
-Before editing, read:
+For every visual frame, add required visual and motion fields, including `effects` and `focal` and/or `roles`. Add one video-wide `## Video direction` block for overall visual direction, motion style, pacing, and design rules.
 
-- `references/visual-design.md`
-- `references/composition.md`
-- `references/motion-language.md`
-- `../hyperframes-animation/`
+Do not change story, script, asset choices, `asset_candidates`, `transition_in`, or captured source material. Do not write HTML in this step.
 
-Use `visual-design.md` for the exact fields to add to each frame and for the required `## Video direction` block.
+Stage named assets after visual design is locked:
 
-Use `composition.md` to decide layout, hierarchy, focal points, and visual roles.
+`node <SKILL_DIR>/scripts/stage-assets.mjs --storyboard ./STORYBOARD.md --hyperframes .`
 
-Use `motion-language.md` and `../hyperframes-animation/` to choose valid motion effects and `blueprint` IDs. Do not invent effect names or blueprint IDs.
-
-For each visual frame, add the required visual and motion fields, including:
-
-- `effects`
-- `focal` and/or `roles`
-
-Also add one video-wide `## Video direction` block that defines the overall visual direction, motion style, pacing, and design rules for the full video.
-
-Do not change the story, script, asset choices, `asset_candidates`, `transition_in`, or captured source material from Step 3. Do not write HTML in this step.
-
-**Gate:** Every visual frame in `STORYBOARD.md` has `effects` plus `focal` and/or `roles`, and the `## Video direction` block exists.
+**Gate:** every visual frame has `effects` plus `focal` and/or `roles`; `## Video direction` exists; `public/` contains the named assets.
 
 ---
 
 ## Step 5: Build Frames
 
-Build each approved frame into an isolated HTML composition and assemble the playable HyperFrames index.
+Goal: Build every storyboard frame as an HTML composition and assemble the playable video.
 
-First, once the Step 3.1 audio job has finished, join audio into `STORYBOARD.md` before dispatching workers — so frames build against real voice durations (skip both passes when the project is silent):
+Wait for Step 3.1 audio to finish if audio was started. Then sync durations and fetch SFX; skip both if silent.
 
-```bash
-node <SKILL_DIR>/scripts/audio.mjs sync-durations --audio-meta ./audio_meta.json --storyboard ./STORYBOARD.md
-node <SKILL_DIR>/scripts/audio.mjs fetch-sfx --storyboard ./STORYBOARD.md --hyperframes .
-```
+`node <SKILL_DIR>/scripts/audio.mjs sync-durations --audio-meta ./audio_meta.json --storyboard ./STORYBOARD.md`
 
-Duration syncing is mechanical — real voice duration wins, silent frames keep their estimate; never hand-edit synced durations. `fetch-sfx` downloads each named SFX from the HeyGen Audio API.
+`node <SKILL_DIR>/scripts/audio.mjs fetch-sfx --storyboard ./STORYBOARD.md --hyperframes .`
 
-**Read:** `[sub-agents/frame-worker.md](sub-agents/frame-worker.md)`. It contains the per-frame composition contract and cites the generic composition rules in `hyperframes-core`. Before the first dispatch, read `[../hyperframes-core/references/subagent-dispatch.md](../hyperframes-core/references/subagent-dispatch.md)` once.
+Duration sync is mechanical: real voice duration wins; silent frames keep estimates; never hand-edit synced durations.
 
-Dispatch **one sub-agent per frame, in parallel**. If the harness caps parallelism below the number of frames, run workers in waves; still assign exactly one frame per worker.
+Before dispatch, read `sub-agents/frame-worker.md` and `../hyperframes-core/references/subagent-dispatch.md`. Dispatch one sub-agent per frame, in parallel if possible; otherwise run workers in waves. Each worker gets exactly one frame.
 
-Each worker's context must include:
+Each worker context must include `PROJECT_DIR`, `frame_id`, canvas size, caption status and keep-out band if captions are enabled, and `ANIM_DIR` as the absolute path to `../hyperframes-animation/`. Each worker reads `frame.md`, its own `## Frame N` block from `STORYBOARD.md`, and the recipe body for each cited effect or blueprint ID. Each worker writes only `compositions/frames/NN-*.html`. Workers must never edit `STORYBOARD.md`.
 
-- `PROJECT_DIR`.
-- `frame_id`.
-- Canvas size.
-- `Captions: <enabled|disabled>`, plus the caption keep-out band when captions are enabled.
-- `ANIM_DIR`, the absolute path to the shared `../hyperframes-animation/` skill, so cited effect and blueprint IDs can resolve to their recipe bodies.
+As each worker returns, the orchestrator marks that frame as `animated` in `STORYBOARD.md`.
 
-Each worker reads:
+After audio timings exist, build captions in the background and assemble the index:
 
-- `frame.md` as the design truth.
-- Its own `## Frame N` block from `STORYBOARD.md`.
-- The recipe body for each cited effect or blueprint ID.
+`node <SKILL_DIR>/scripts/captions.mjs build --storyboard ./STORYBOARD.md --audio-meta ./audio_meta.json --hyperframes . --out ./caption_groups.json &`
 
-Each worker writes only one output: `compositions/frames/NN-*.html`.
+`node <SKILL_DIR>/scripts/assemble-index.mjs --storyboard ./STORYBOARD.md --hyperframes .`
 
-Workers must never edit the shared `STORYBOARD.md`, because concurrent writes would race. As each worker returns, you, the orchestrator, mark that frame as `built`, then `animated`, in `STORYBOARD.md`.
+`captions: skipped (<reason>)` is valid. Continue without captions when explicitly skipped.
 
-Once audio timings exist, build captions in the background, then assemble the index:
-
-```bash
-node <SKILL_DIR>/scripts/captions.mjs build --storyboard ./STORYBOARD.md --audio-meta ./audio_meta.json --hyperframes . --out ./caption_groups.json &
-node <SKILL_DIR>/scripts/assemble-index.mjs --storyboard ./STORYBOARD.md --hyperframes .
-```
-
-`captions: skipped (<reason>)` is a valid outcome. Continue without a captions track when captions are skipped.
-
-**Gate:** every frame is marked `animated`, `index.html` is assembled, and captions are either built or explicitly skipped.
+**Gate:** every frame is marked `animated`, `index.html` exists, and captions are built or explicitly skipped.
 
 ---
 
 ## Step 6: Finalize
 
-Inject transitions, validate the assembled project, and render the final video.
+Goal: Verify the assembled video, get user approval, and render the final MP4.
 
-Run the final commands. There is **no backstop** in this step: if any command fails, surface stderr and stop. The user decides the fix; do not silently self-heal this step.
+Inject transitions, run checks, pause for review, then render.
 
-```bash
-node <SKILL_DIR>/scripts/transitions.mjs inject --storyboard ./STORYBOARD.md --hyperframes .
-node <SKILL_DIR>/scripts/transitions.mjs verify --storyboard ./STORYBOARD.md --index ./index.html
-npx hyperframes lint
-npx hyperframes validate
-npx hyperframes inspect
-npx hyperframes snapshot --at <frame-midpoints>
-npx hyperframes render --quality high --output renders/video.mp4
-```
+`node <SKILL_DIR>/scripts/transitions.mjs inject --storyboard ./STORYBOARD.md --hyperframes .`
 
-A gate that names a frame indicates a worker contract break. Re-dispatch that frame's worker from Step 5, then rerun the finalization commands.
+`node <SKILL_DIR>/scripts/transitions.mjs verify --storyboard ./STORYBOARD.md --index ./index.html`
 
-Offer a live preview only after the render. Never auto-open a preview: a mid-run preview can show half-built frames and fail with the server. On request, run:
+`npx hyperframes lint`
 
-```bash
-npx hyperframes preview
-```
+`npx hyperframes validate`
 
-Report the real preview URL.
+`npx hyperframes inspect`
 
-**Gate:** `lint` , `validate` and `inspect` pass, and `renders/video.mp4` exists. The final reply states the MP4 path, duration, and offers the preview.
+`npx hyperframes snapshot --at <frame-midpoints>`
+
+If a command fails, surface stderr and stop. Do not pile on recovery commands. If a gate names a frame, fix `compositions/frames/NN-*.html` with the cheapest safe fix: edit the frame HTML for a local issue; re-dispatch the frame worker only when the whole shot must be rebuilt.
+
+After checks pass, pause for user review. The video is assembled, viewable, and editable in Studio. Manage preview only once across Step 3 and Step 6: open it if the user asked earlier, offer it if they declined earlier, and do not ask again if they are already reviewing in Studio.
+
+Preview: `npx hyperframes preview`
+
+Render only after user approval:
+
+`npx hyperframes render --quality high --output renders/video.mp4`
+
+Do not rerun `lint`, `validate`, `inspect`, or `snapshot` after rendering unless the user asks.
+
+**Gate:** `lint`, `validate`, and `inspect` passed before render; user approved at the review pause; `renders/video.mp4` exists. Final reply states MP4 path and final duration.
 
 ---
 
@@ -247,7 +173,7 @@ Report the real preview URL.
 
 **Formats:** landscape `1920x1080` by default; portrait `1080x1920`; square `1080x1080`. Set the format once in the storyboard frontmatter.
 
-**Background scripts:** the workflow ships only these scripts under `scripts/`: `audio` for TTS, transcription, BGM, SFX, and duration syncing; `captions`; `transitions` for inject and verify; and `assemble-index`. Everything else is handled by the `hyperframes` CLI.
+**Background scripts:** the workflow ships only these scripts under `scripts/`: `audio` for TTS, transcription, BGM, SFX, and duration syncing; `captions`; `transitions` for inject and verify; `stage-assets` for copying frame-named assets into `public/`; and `assemble-index`. Everything else is handled by the `hyperframes` CLI.
 
 | Read                                                                                                         | When                                                     |
 | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
