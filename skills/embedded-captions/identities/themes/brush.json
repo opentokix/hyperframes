@@ -53,6 +53,7 @@
       "breatheHz": 0.55,
       "sealDelay": 0.04,
       "sealSize": 64,
+      "sealGlyph": "観",
       "seed": 380611
     }
   },

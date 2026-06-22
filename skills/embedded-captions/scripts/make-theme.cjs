@@ -1116,6 +1116,34 @@ function paradigmPoem() {
   const b = dna.body;
   const colLeft = CLEARER === "right" ? Math.round(W * 0.52) : b.left;
   const scrimSide = CLEARER === "right" ? "right" : "left";
+  // WIDTH-FIT the poem column. .pline is white-space:nowrap at left=colLeft with
+  // no width-fit; the apex line carries the 2x-scale italic hero (.big) + minors
+  // (.em), so a long climax line (e.g. "everything is sharp again.") overruns the
+  // frame and the trailing word renders off-screen. Estimate the widest RENDERED
+  // line — per word at its scaled px (.big=bigScale, .em=emScale, else 1x) plus
+  // the 0.28em inter-word spacers — and shrink b.fontPx so it fits availW. The
+  // shrunk fontPx propagates to .big/.em (both derive from it).
+  const bigScale = b.bigScale || 2;
+  const emScale = b.emScale || 1.38;
+  const fam = dna.fonts.body;
+  const availW = W - colLeft - 40;
+  // widest line width in EM units (independent of fontPx): word advances scaled
+  // by their class factor + (wordCount-1) spacers of 0.28em.
+  let widestEm = 0;
+  LINES.forEach((L) => {
+    let em = 0;
+    L.words.forEach((w, wi) => {
+      const cls = w.isHero && heroInline ? "big" : w.minor ? "em" : "";
+      const factor = cls === "big" ? bigScale : cls === "em" ? emScale : 1;
+      const advEm = wordPx(w.display, fam, 1, 0) || w.display.length * 0.5;
+      em += advEm * factor;
+      if (wi > 0) em += 0.28; // .sp spacer
+    });
+    if (em > widestEm) widestEm = em;
+  });
+  if (widestEm * b.fontPx > availW) {
+    b.fontPx = Math.max(28, Math.floor(availW / widestEm));
+  }
   // stanza split: break after a line whose last word ends a sentence
   const stanzas = [[]];
   LINES.forEach((L) => {
@@ -1169,6 +1197,33 @@ function paradigmPoem() {
   // ---- body paradigm: POEM (condense, accumulate, ${disperse ? "disperse" : "hold"}) ----
   const prnd = mulberry32(${b.seed || 777});
   const stage = document.getElementById("stage");
+  // STARDUST SCATTER — shared exit routine: every line dissolves into dust on
+  // its way out (climax dispersal AND per-line stanza exits use this one path).
+  // Each letter blows apart + blurs, and a few outbound .star particles spawn AT
+  // the letters and fly OUT (the reverse of the inbound assembly particle loop).
+  function scatterOut(letters, t) {
+    letters.forEach((l) => {
+      gsap.set(l, { transformOrigin: "50% 50%" });
+      tl.to(l, { x: (prnd() - 0.5) * 180, y: (prnd() - 0.5) * 140 - 30, opacity: 0,
+                 filter: "blur(6px)", duration: 0.45, ease: "power2.in" }, t);
+    });
+    // emit a few outbound dust particles per exiting line (reverse of assembly)
+    const n = Math.max(3, Math.round(letters.length * 0.6));
+    for (let i = 0; i < n; i++) {
+      const seed = letters[i % letters.length];
+      const r = seed.getBoundingClientRect();
+      const host = stage.getBoundingClientRect();
+      const ox = r.left - host.left + r.width / 2, oy = r.top - host.top + r.height / 2;
+      const p = document.createElement("div");
+      p.className = "star"; stage.appendChild(p);
+      const s = 2 + Math.round(prnd() * 3);
+      gsap.set(p, { width: s, height: s, left: ox, top: oy });
+      const dx = (prnd() - 0.5) * 320, dy = (prnd() - 0.5) * 220 - 40;
+      tl.to(p, { keyframes: { x: [0, dx * 0.5, dx], y: [0, dy * 0.5, dy], opacity: [0, 0.9, 0] },
+                 duration: 0.5 + prnd() * 0.2, ease: "power2.in" }, t + prnd() * 0.12);
+    }
+  }
+  const lineLetters = {};
 ${
   b.scrim
     ? `  tl.fromTo("#pscrim", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.out" }, 0.15);
@@ -1176,17 +1231,17 @@ ${
     : ""
 }
   const STANZAS = ${J(stanzaData)};
-  const lastLetters = [];
   STANZAS.forEach((stanza, si) => {
     stanza.forEach((L) => {
       const line = document.getElementById(L.id);
+      lineLetters[L.id] = [];
       L.words.forEach(([txt, st, cls], wi) => {
         if (wi > 0) { const g = document.createElement("span"); g.className = "sp"; line.appendChild(g); }
         const letters = [];
         for (const ch of txt) {
           const l = document.createElement("span");
           l.className = "l" + (cls ? " " + cls : ""); l.textContent = ch;
-          line.appendChild(l); letters.push(l);
+          line.appendChild(l); letters.push(l); lineLetters[L.id].push(l);
         }
         const spread = cls === "big" ? ${dna.hero.params.spread || 150} : 46;
         letters.forEach((l, li) => {
@@ -1195,7 +1250,6 @@ ${
             { x: 0, y: 0, opacity: 1, filter: "blur(0px)",
               duration: cls === "big" ? 0.7 : 0.5, ease: "power2.out" },
             st - 0.04 + li * (cls === "big" ? 0.03 : 0.016));
-          if (si === ${lastStanzaIdx}) lastLetters.push(l);
         });
         if (cls === "big") {
           // SETPIECE assembly: star particles fly INTO the apex as it forms
@@ -1217,27 +1271,25 @@ ${
         }
       });
     });
-    // earlier stanzas drift out before the next stanza begins
+    // earlier stanzas SCATTER into dust before the next stanza begins — every
+    // line dissolves into stardust on its way out (matches the climax), not a
+    // plain lift+fade. Uses the shared scatterOut routine.
     if (si < STANZAS.length - 1) {
       const nextIn = STANZAS[si + 1][0].words[0][1];
       stanza.forEach((L, k) => {
-        tl.to("#" + L.id + " .l", { y: -10, opacity: 0, filter: "blur(4px)",
-          duration: 0.5, ease: "power1.in", stagger: 0.008 }, nextIn - 0.62 + k * 0.12);
+        scatterOut(lineLetters[L.id], nextIn - 0.55 + k * 0.12);
         tl.set("#" + L.id, { display: "none" }, nextIn + 0.1);
       });
     }
   });
 ${
   disperse
-    ? `  // SEMANTIC EXIT: the whole visible poem disperses on the final word.
-  // Clamped so the scatter COMPLETES before the clip ends (stagger included).
+    ? `  // SEMANTIC EXIT: the whole visible poem disperses into stardust on the
+  // final word — same scatterOut routine as the per-line exits, so the climax
+  // and every line share one dispersal. Clamped so it COMPLETES before the clip
+  // ends (stagger included).
   const NZ = ${Math.min(LASTWORD.start + 0.06, DUR - 0.58).toFixed(3)};
-  const DDUR = ${Math.min(0.42, Math.max(0.24, DUR - Math.min(LASTWORD.start + 0.06, DUR - 0.58) - 0.14)).toFixed(2)};
-  lastLetters.forEach((l) => {
-    const dx = (prnd() - 0.5) * 260, dy = (prnd() - 0.5) * 200 - 40;
-    tl.to(l, { x: dx, y: dy, opacity: 0, filter: "blur(7px)",
-               duration: DDUR, ease: "power2.in" }, NZ + prnd() * 0.05);
-  });`
+  STANZAS[${lastStanzaIdx}].forEach((L, k) => scatterOut(lineLetters[L.id], NZ + k * 0.06));`
     : ""
 }`;
   return { css, html, js };
@@ -2199,10 +2251,39 @@ function paradigmLastpage() {
     out: +L.out.toFixed(3),
     words: L.words.map((w) => [w.display, +w.start.toFixed(3)]),
   }));
+  // Relocate the readable .ms reading row OUT of the subject column into the
+  // CLEARER side and lift it above the torso (driven by safe-zones). lastpage
+  // authors body.layer:"bg", so the matte composites the subject ON TOP of the
+  // caption layer — a center-bottom row gets occluded by the speaker's torso
+  // (only a 1-2 char tail peeks past his shoulder). Anchoring the nowrap row
+  // into the open band on the clearer side, lifted above the torso, keeps every
+  // line clear of the subject. The haunting blurred .fld field is unchanged.
+  // Falls back to the original center-bottom behavior when safe-zones absent.
+  const hasZones = !!(sz && sz.subject);
+  const colMaxPx = hasZones ? (W * (sz.subject.colMaxPct ?? 68.8)) / 100 : W * 0.69;
+  const colMinPx = hasZones ? (W * (sz.subject.colMinPct ?? 10.4)) / 100 : W * 0.1;
+  let msLeft, msTop, msXPercent;
+  if (hasZones && CLEARER === "right") {
+    // right-anchor into the open right band; nowrap line grows LEFT into the clear band
+    msLeft = Math.round(Math.max(colMaxPx + 360, W - 40));
+    msTop = Math.round(H * 0.78);
+    msXPercent = -100;
+  } else if (hasZones && CLEARER === "left") {
+    // mirror: left-anchor into the open left band; line grows RIGHT into the clear band
+    msLeft = Math.round(Math.min(colMinPx - 360, 40));
+    if (msLeft < 40) msLeft = 40;
+    msTop = Math.round(H * 0.78);
+    msXPercent = 0;
+  } else {
+    // no safe-zones: original centered-bottom behavior
+    msLeft = Math.round(W / 2);
+    msTop = Math.round(H - (b.bottomPx || 96));
+    msXPercent = -50;
+  }
   const css = `
   .fld { position:absolute; white-space:nowrap; font-family:'${dna.fonts.body}', serif;
          font-weight:600; color:${dna.palette.body}; filter: blur(${b.fieldBlur || 9}px); }
-  .ms  { position:absolute; left:${W / 2}px; top:${H - (b.bottomPx || 96)}px; opacity:0; white-space:nowrap;
+  .ms  { position:absolute; left:${msLeft}px; top:${msTop}px; opacity:0; white-space:nowrap;
          font-family:'${dna.fonts.body}', serif; font-size:${b.fontPx}px; line-height:1;
          color:${dna.palette.body}; text-shadow: 0 2px 12px rgba(0,0,0,0.6); }
   .ms .w { display:inline-block; opacity:0; margin:0 0.14em; overflow:hidden; vertical-align:bottom; white-space:nowrap; }`;
@@ -2222,7 +2303,7 @@ function paradigmLastpage() {
   MS.forEach((L) => {
     const line = document.getElementById(L.id);
     L.words.forEach(([txt]) => { const sp = document.createElement("span"); sp.className = "w"; sp.textContent = txt; line.appendChild(sp); });
-    gsap.set(line, { xPercent: -50, yPercent: -100 });
+    gsap.set(line, { xPercent: ${msXPercent}, yPercent: -100 });
     tl.set(line, { opacity: 1 }, L.in);
     const XO = L.out - ${b.exit === "drop" ? "0.18" : "0.17"};   // exit start (single source)
     let lastB = -1;                                              // line-y bounce ownership guard
@@ -2248,11 +2329,17 @@ function paradigmLastpage() {
         : `tl.to("#f${i}", { opacity: ${(f.op * 0.85).toFixed(2)}, duration: 0.5 }, I + 0.3);`,
     )
     .join("\n  ")}
-  // hold revealed ~1.2s, then the future blurs back except the main instance
-  tl.to(".fld", { filter: "blur(${b.fieldBlur || 9}px)", duration: 0.6, ease: "power2.inOut" }, I + 1.5);
-  tl.to("#f${inst.indexOf(main)}", { filter: "blur(0px)", duration: 0.01 }, I + 1.5);
-  ${inst.map((f, i) => (i === inst.indexOf(main) ? "" : `tl.to("#f${i}", { opacity: 0, duration: 0.6 }, I + 1.6);`)).join("\n  ")}
-  tl.to("#f${inst.indexOf(main)}", { opacity: 0, duration: 0.3, ease: "power2.in" }, ${(heroOut - 0.3).toFixed(3)});`;
+  // hold revealed ~1.2s, then the future blurs back except the main instance.
+  // Clamp the coda to the clip: a late-spoken apex (e.g. "sharp" at 7.32s in an
+  // 8.04s clip) would park I+1.5 and heroOut-0.3 PAST DUR, so the signature
+  // rack-focus payoff never plays. Anchor to the clip window (mirrors the
+  // heroHoldsToEnd handling above) so the coda always lands on-frame.
+  const CODA_RACK = ${Math.min(I + 1.5, DUR - 0.5).toFixed(3)};
+  const CODA_FADE = ${Math.min(heroOut - 0.3, DUR - 0.2).toFixed(3)};
+  tl.to(".fld", { filter: "blur(${b.fieldBlur || 9}px)", duration: 0.6, ease: "power2.inOut" }, CODA_RACK);
+  tl.to("#f${inst.indexOf(main)}", { filter: "blur(0px)", duration: 0.01 }, CODA_RACK);
+  ${inst.map((f, i) => (i === inst.indexOf(main) ? "" : `tl.to("#f${i}", { opacity: 0, duration: 0.6 }, CODA_RACK + 0.1);`)).join("\n  ")}
+  tl.to("#f${inst.indexOf(main)}", { opacity: 0, duration: 0.3, ease: "power2.in" }, CODA_FADE);`;
   return { css, html, js };
 }
 
