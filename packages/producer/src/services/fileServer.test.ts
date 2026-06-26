@@ -578,6 +578,137 @@ describe("createFileServer", () => {
 });
 
 describe("HF_EARLY_STUB + HF_BRIDGE_SCRIPT integration", () => {
+  it("does not ship the obsolete fast-capture autoAlpha rewrite flag", () => {
+    expect(HF_EARLY_STUB).not.toContain("__HF_FAST_CAPTURE_AUTOALPHA__");
+    expect(HF_EARLY_STUB).not.toContain("HF_FAST_CAPTURE_AUTOALPHA");
+  });
+
+  it("does not rewrite top-level GSAP opacity vars when the obsolete flag is present", () => {
+    const sandbox: {
+      window: Record<string, unknown> & {
+        __hf?: Record<string, unknown>;
+        __HF_FAST_CAPTURE_AUTOALPHA__?: boolean;
+        gsap?: {
+          timeline: () => Record<string, unknown>;
+          set: (...args: unknown[]) => unknown;
+        };
+        requestAnimationFrame: typeof requestAnimationFrame;
+        setTimeout: typeof setTimeout;
+      };
+      document: Record<string, never>;
+      CustomEvent: typeof CustomEvent;
+    } = {
+      window: {
+        __HF_FAST_CAPTURE_AUTOALPHA__: true,
+        requestAnimationFrame: (() => 1) as typeof requestAnimationFrame,
+        setTimeout: (() => 1) as typeof setTimeout,
+      },
+      document: {},
+      CustomEvent,
+    };
+    sandbox.window.window = sandbox.window;
+    sandbox.window.document = sandbox.document;
+    sandbox.window.CustomEvent = sandbox.CustomEvent;
+
+    new Function("window", "document", "CustomEvent", `with (window) {\n${HF_EARLY_STUB}\n}`)(
+      sandbox.window,
+      sandbox.document,
+      sandbox.CustomEvent,
+    );
+
+    const setCalls: unknown[][] = [];
+    sandbox.window.gsap = {
+      timeline: () => ({
+        to: () => {},
+        from: () => {},
+        fromTo: () => {},
+        set: () => {},
+        pause: () => {},
+        play: () => {},
+        seek: () => {},
+        totalTime: () => 0,
+        time: () => 0,
+        duration: () => 10,
+        add: () => {},
+        getChildren: () => [],
+        paused: () => true,
+        timeScale: () => 1,
+        kill: () => {},
+      }),
+      set: (...args: unknown[]) => {
+        setCalls.push(args);
+      },
+    };
+
+    sandbox.window.gsap.set("#caption", { opacity: 0, duration: 0 });
+
+    expect(setCalls).toEqual([["#caption", { opacity: 0, duration: 0 }]]);
+  });
+
+  it("does not rewrite batched timeline opacity vars when the obsolete flag is present", () => {
+    const sandbox: {
+      window: Record<string, unknown> & {
+        __hf?: Record<string, unknown>;
+        __HF_FAST_CAPTURE_AUTOALPHA__?: boolean;
+        __hfTimelinesBuilding?: boolean;
+        gsap?: { timeline: () => { to: (...args: unknown[]) => unknown; getChildren: () => [] } };
+        requestAnimationFrame: typeof requestAnimationFrame;
+        setTimeout: typeof setTimeout;
+      };
+      document: Record<string, never>;
+      CustomEvent: typeof CustomEvent;
+    } = {
+      window: {
+        __HF_FAST_CAPTURE_AUTOALPHA__: true,
+        requestAnimationFrame: (() => 1) as typeof requestAnimationFrame,
+        setTimeout: ((callback: () => void) => {
+          callback();
+          return 1;
+        }) as typeof setTimeout,
+      },
+      document: {},
+      CustomEvent,
+    };
+    sandbox.window.window = sandbox.window;
+    sandbox.window.document = sandbox.document;
+    sandbox.window.CustomEvent = sandbox.CustomEvent;
+
+    new Function("window", "document", "CustomEvent", `with (window) {\n${HF_EARLY_STUB}\n}`)(
+      sandbox.window,
+      sandbox.document,
+      sandbox.CustomEvent,
+    );
+
+    const timelineCalls: unknown[][] = [];
+    sandbox.window.gsap = {
+      timeline: () => ({
+        to: (...args: unknown[]) => {
+          timelineCalls.push(args);
+        },
+        from: () => {},
+        fromTo: () => {},
+        set: () => {},
+        pause: () => {},
+        play: () => {},
+        seek: () => {},
+        totalTime: () => 0,
+        time: () => 0,
+        duration: () => 10,
+        add: () => {},
+        getChildren: () => [],
+        paused: () => true,
+        timeScale: () => 1,
+        kill: () => {},
+      }),
+    };
+
+    const timeline = sandbox.window.gsap.timeline();
+    timeline.to("#caption", { opacity: 0, duration: 0.2 });
+    timeline.getChildren();
+
+    expect(timelineCalls).toEqual([["#caption", { opacity: 0, duration: 0.2 }]]);
+  });
+
   /**
    * Simulates the real injection order in a Puppeteer page:
    *   1. HF_EARLY_STUB  (start of <head>, before everything)
