@@ -101,7 +101,7 @@ export default defineCommand({
 
     const { Hono } = await import("hono");
     const { createAdaptorServer } = await import("@hono/node-server");
-    const { isSafePath } = await import("@hyperframes/core/studio-api");
+    const { isSafePath } = await import("@hyperframes/studio-server");
 
     const app = new Hono();
 

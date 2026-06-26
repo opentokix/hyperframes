@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
-import { getMimeType } from "@hyperframes/core/studio-api";
+import { getMimeType } from "@hyperframes/studio-server";
 
 export interface StaticProjectServer {
   url: string;

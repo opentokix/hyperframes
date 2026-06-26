@@ -3,5 +3,7 @@ export type {
   HyperframeLintFinding,
   HyperframeLintResult,
   HyperframeLinterOptions,
-} from "./types";
-export { lintHyperframeHtml, lintMediaUrls } from "./hyperframeLinter";
+} from "./types.js";
+export { lintHyperframeHtml, lintMediaUrls } from "./hyperframeLinter.js";
+export { lintProject, shouldBlockRender } from "./project.js";
+export type { ProjectLintResult } from "./project.js";

@@ -8,7 +8,13 @@
     "directory": "packages/core"
   },
   "files": [
-    "dist",
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
+    "dist/**/*.js.map",
+    "!dist/hyperframe.runtime.iife.js",
+    "!dist/hyperframe.runtime.mjs",
+    "!dist/generated/runtime-inline.js",
     "docs",
     "schemas",
     "README.md"
@@ -33,6 +39,10 @@
     "./slideshow": {
       "import": "./src/slideshow/index.ts",
       "types": "./src/slideshow/index.ts"
+    },
+    "./generators": {
+      "import": "./src/generators/hyperframes.ts",
+      "types": "./src/generators/hyperframes.ts"
     },
     "./lint": {
       "import": "./src/lint/index.ts",
@@ -149,6 +159,10 @@
       "./html-attr-safety": {
         "import": "./dist/utils/htmlAttrSafety.js",
         "types": "./dist/utils/htmlAttrSafety.d.ts"
+      },
+      "./generators": {
+        "import": "./dist/generators/hyperframes.js",
+        "types": "./dist/generators/hyperframes.d.ts"
       },
       "./lint": {
         "import": "./dist/lint/index.js",

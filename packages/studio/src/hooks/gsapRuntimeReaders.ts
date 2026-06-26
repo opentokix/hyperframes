@@ -1,8 +1,8 @@
 /**
  * Low-level GSAP runtime property readers shared by gsapRuntimeBridge and gsapDragCommit.
  */
-import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
-import { classifyPropertyGroup, type PropertyGroupName } from "@hyperframes/core/gsap-parser";
+import type { GsapAnimation } from "@hyperframes/parsers/gsap-parser";
+import { classifyPropertyGroup, type PropertyGroupName } from "@hyperframes/parsers/gsap-parser";
 import { getIframeGsap, queryIframeElement } from "./gsapShared";
 import { roundTo3 } from "../utils/rounding";
 

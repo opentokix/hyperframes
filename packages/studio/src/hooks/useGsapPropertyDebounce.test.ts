@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { openComposition } from "@hyperframes/sdk";
 import { createMemoryAdapter } from "@hyperframes/sdk/adapters/memory";
-import { parseGsapScriptAcorn } from "@hyperframes/core/gsap-parser-acorn";
+import { parseGsapScriptAcorn } from "@hyperframes/parsers/gsap-parser-acorn";
 import { mergeTweenProperties } from "./useGsapPropertyDebounce";
 import { extractGsapScriptText } from "../utils/gsapSoftReload";
 

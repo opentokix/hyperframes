@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef } from "react";
-import { findUnsafeMutationValues } from "@hyperframes/core/studio-api/finite-mutation";
+import { findUnsafeMutationValues } from "@hyperframes/studio-server/finite-mutation";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import { applySoftReload, extractGsapScriptText } from "../utils/gsapSoftReload";
 import type { SoftReloadResult } from "../utils/gsapSoftReload";

@@ -1,4 +1,4 @@
-import type { ParsedGsap } from "@hyperframes/core/gsap-parser";
+import type { ParsedGsap } from "@hyperframes/parsers/gsap-parser";
 import type { Composition } from "@hyperframes/sdk";
 import type { DomEditSelection } from "../components/editor/domEditingTypes";
 import type { EditHistoryKind } from "../utils/editHistory";

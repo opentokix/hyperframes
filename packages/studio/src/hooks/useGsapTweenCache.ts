@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import type { GsapAnimation, GsapKeyframesData, ParsedGsap } from "@hyperframes/core/gsap-parser";
-import type { GsapPercentageKeyframe } from "@hyperframes/core/gsap-parser";
-import { isStudioHoldSet } from "@hyperframes/core/gsap-parser";
+import type {
+  GsapAnimation,
+  GsapKeyframesData,
+  ParsedGsap,
+} from "@hyperframes/parsers/gsap-parser";
+import type { GsapPercentageKeyframe } from "@hyperframes/parsers/gsap-parser";
+import { isStudioHoldSet } from "@hyperframes/parsers/gsap-parser";
 import { usePlayerStore } from "../player/store/playerStore";
 import { readRuntimeKeyframes, scanAllRuntimeKeyframes } from "./gsapRuntimeBridge";
 import {

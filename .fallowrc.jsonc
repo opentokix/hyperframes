@@ -336,11 +336,13 @@
       "packages/parsers/src/gsapParser.ts",
       // htmlParser.ts has pre-existing complexity (moved from packages/core).
       "packages/parsers/src/htmlParser.ts",
-      // media.ts and textures.ts: lint rule implementations with pre-existing
-      // complexity (moved from packages/core/src/lint/rules/). File-level
-      // exemption avoids the line-shift fingerprint problem for inherited findings.
+      // lint rule implementations and project linter: pre-existing complexity
+      // (moved from packages/core/src/lint/). File-level exemption avoids the
+      // line-shift fingerprint problem for inherited findings.
       "packages/lint/src/rules/media.ts",
       "packages/lint/src/rules/textures.ts",
+      "packages/lint/src/rules/gsap.ts",
+      "packages/lint/src/project.ts",
       // studio-server files: pre-existing complexity (moved from packages/core/src/studio-api/).
       // files.ts: executeGsapMutationRecast/Acorn are CRITICAL; excluded as files.ts
       // was already in health.ignore at the old path (packages/core/src/studio-api/routes/files.ts).
@@ -362,6 +364,22 @@
       // body is linear validation that reads clearly inline.
       "packages/cli/src/commands/play.ts",
       "packages/cli/src/commands/present.ts",
+      // Files modified only for import-path updates (one-line changes to switch
+      // from @hyperframes/core/* subpaths to the new packages). Their complexity
+      // is pre-existing; the line-shift fingerprint problem makes fallow treat
+      // the violations as new even though no logic changed.
+      "packages/cli/src/commands/lint.ts",
+      "packages/cli/src/commands/preview.ts",
+      "packages/cli/src/commands/publish.ts",
+      "packages/cli/src/server/studioServer.ts",
+      "packages/core/src/core.types.ts",
+      "packages/core/src/generators/hyperframes.ts",
+      "packages/producer/src/services/htmlCompiler.ts",
+      "packages/studio/src/hooks/gsapRuntimeBridge.ts",
+      "packages/studio/src/hooks/gsapShared.ts",
+      "packages/studio/src/hooks/gsapDragPositionCommit.ts",
+      "packages/studio/src/hooks/gsapKeyframeCacheHelpers.ts",
+      "packages/studio/vite.config.ts",
     ],
   },
 }

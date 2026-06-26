@@ -1,4 +1,4 @@
-import type { GsapAnimation } from "@hyperframes/core/gsap-parser";
+import type { GsapAnimation } from "@hyperframes/parsers/gsap-parser";
 
 export function absoluteToPercentage(
   time: number,
