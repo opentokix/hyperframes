@@ -42,6 +42,10 @@
     "./hf-ids": {
       "import": "./src/hfIds.ts",
       "types": "./src/hfIds.ts"
+    },
+    "./gsap-parser-recast": {
+      "import": "./src/gsapParser.ts",
+      "types": "./src/gsapParser.ts"
     }
   },
   "publishConfig": {
@@ -75,6 +79,10 @@
       "./hf-ids": {
         "import": "./dist/hfIds.js",
         "types": "./dist/hfIds.d.ts"
+      },
+      "./gsap-parser-recast": {
+        "import": "./dist/gsapParser.js",
+        "types": "./dist/gsapParser.d.ts"
       }
     },
     "main": "./dist/index.js",
@@ -87,7 +95,16 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "echo skip"
   },
+  "dependencies": {
+    "@babel/parser": "^7.27.0",
+    "acorn": "^8.17.0",
+    "acorn-walk": "^8.3.5",
+    "linkedom": "^0.18.12",
+    "magic-string": "^0.30.21",
+    "recast": "^0.23.11"
+  },
   "devDependencies": {
+    "@hyperframes/core": "workspace:*",
     "@types/node": "^25.0.10",
     "tsup": "^8.0.0",
     "tsx": "^4.21.0",

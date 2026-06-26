@@ -9,6 +9,7 @@ export default defineConfig({
     gsapConstants: "src/gsapConstants.ts",
     springEase: "src/springEase.ts",
     hfIds: "src/hfIds.ts",
+    gsapParser: "src/gsapParser.ts",
   },
   format: ["esm"],
   outDir: "dist",

@@ -142,13 +142,13 @@
         "createFailedCaptureCalibrationEstimate",
       ],
     },
-    // gsapParser.ts is a public-API barrel that re-exports constants, types,
-    // and utilities from gsapConstants, gsapSerialize, and springEase. The
-    // re-exports are intentional public API consumed by callers outside the
+    // gsapParserExports.ts is the public-API barrel that re-exports constants,
+    // types, and utilities from gsapConstants, gsapSerialize, and springEase.
+    // The re-exports are intentional public API consumed by callers outside the
     // changed-file set (e.g. studio, aws-lambda) and therefore appear unused
     // to fallow's static analysis of the PR diff.
     {
-      "file": "packages/core/src/parsers/gsapParser.ts",
+      "file": "packages/parsers/src/gsapParserExports.ts",
       "exports": [
         "PROPERTY_GROUPS",
         "classifyPropertyGroup",
@@ -165,13 +165,19 @@
     // Shared test helpers consumed by gsapParser.test.ts (same file,
     // fallow doesn't trace intra-file test consumption).
     {
-      "file": "packages/core/src/parsers/gsapParser.test-helpers.ts",
+      "file": "packages/parsers/src/gsapParser.test-helpers.ts",
       "exports": [
         "expectKeyframe",
         "expectKeyframesFormat",
         "convertAndReparse",
         "parseSplitAndAssert",
       ],
+    },
+    // hfIds: EXCLUDED_TAGS is consumed by tests (htmlParser.test.ts) and
+    // hfIdPersist.ts but fallow's static analyzer may not trace all consumers.
+    {
+      "file": "packages/parsers/src/hfIds.ts",
+      "exports": ["EXCLUDED_TAGS", "mintHfId"],
     },
     // Shared timeline components extracted for downstream PRs in the
     // razor-blade stack (#1330, #1331). Consumers live on those branches.
@@ -244,6 +250,18 @@
     // require intrusive middleware changes beyond this PR's scope.
     "minLines": 6,
     "ignore": [
+      // gsapParser.ts: recast/babel GSAP writer — intentional duplication between
+      // recast and acorn parallel implementations (pre-existing, moved from core).
+      "packages/parsers/src/gsapParser.ts",
+      // Parser test files: parallel arrange/act/assert test cases — pre-existing
+      // duplication moved from packages/core/src/parsers/.
+      "packages/parsers/src/gsapParser.test.ts",
+      "packages/parsers/src/gsapParser.test-helpers.ts",
+      "packages/parsers/src/gsapWriter.parity.test.ts",
+      "packages/parsers/src/gsapWriterParity.corpus.test.ts",
+      "packages/parsers/src/gsapWriterParity.acorn.test.ts",
+      "packages/parsers/src/htmlParser.roundtrip.test.ts",
+      "packages/parsers/src/htmlParser.test.ts",
       // slideshowPanelHelpers.ts: setSlideNotes/addFragment/addHotspot share an
       // intentional parallel shape (signature + mapSlidesIn → exists-check →
       // map/append); the per-slide mutation differs, so a shared abstraction
@@ -286,6 +304,10 @@
     "ignore": [
       "packages/core/src/studio-api/routes/files.ts",
       "packages/core/src/parsers/gsapParser.ts",
+      // gsapParser.ts moved to packages/parsers — same complexity rationale.
+      "packages/parsers/src/gsapParser.ts",
+      // htmlParser.ts has pre-existing complexity (moved from packages/core).
+      "packages/parsers/src/htmlParser.ts",
       // SlideshowPanel.tsx: top-level editor panel that wires several independent
       // sections (slides/inspector/branches/hotspot). Its cyclomatic count comes
       // from that fan-out; splitting it would scatter shared state without

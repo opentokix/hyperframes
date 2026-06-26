@@ -103,16 +103,11 @@
       "name": "@hyperframes/core",
       "version": "0.7.11",
       "dependencies": {
-        "@babel/parser": "^7.27.0",
         "@chenglou/pretext": "^0.0.5",
         "@hyperframes/parsers": "workspace:*",
-        "acorn": "^8.17.0",
-        "acorn-walk": "^8.3.5",
         "bpm-detective": "^2.0.5",
-        "magic-string": "^0.30.21",
         "postcss": "^8.5.8",
         "postcss-selector-parser": "^7.1.2",
-        "recast": "^0.23.11",
       },
       "devDependencies": {
         "@types/jsdom": "^28.0.0",
@@ -125,7 +120,6 @@
       },
       "optionalDependencies": {
         "esbuild": "^0.25.12",
-        "linkedom": "^0.18.12",
       },
       "peerDependencies": {
         "hono": "^4.0.0",
@@ -175,7 +169,16 @@
     "packages/parsers": {
       "name": "@hyperframes/parsers",
       "version": "0.7.11",
+      "dependencies": {
+        "@babel/parser": "^7.27.0",
+        "acorn": "^8.17.0",
+        "acorn-walk": "^8.3.5",
+        "linkedom": "^0.18.12",
+        "magic-string": "^0.30.21",
+        "recast": "^0.23.11",
+      },
       "devDependencies": {
+        "@hyperframes/core": "workspace:*",
         "@types/node": "^25.0.10",
         "tsup": "^8.0.0",
         "tsx": "^4.21.0",
