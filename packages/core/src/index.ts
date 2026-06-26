@@ -144,8 +144,8 @@ export type {
   HyperframeLintFinding,
   HyperframeLintResult,
   HyperframeLinterOptions,
-} from "./lint/types";
-export { lintHyperframeHtml } from "./lint/hyperframeLinter";
+} from "@hyperframes/lint";
+export { lintHyperframeHtml } from "@hyperframes/lint";
 export {
   rewriteAssetPaths,
   rewriteAssetPath,
