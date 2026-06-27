@@ -318,17 +318,6 @@ export async function resolveDomEditSelection(
   }
   let current: HTMLElement | null =
     capture.kind === "unit" ? capture.element : getSelectionCandidate(startEl, options);
-  // eslint-disable-next-line no-console
-  console.log(
-    "[HF-DBG] resolveDomEditSelection start",
-    JSON.stringify({
-      startEl: startEl.id || startEl.tagName,
-      captureKind: capture.kind,
-      startCurrent: current
-        ? current.id || current.getAttribute("data-hf-group") || current.tagName
-        : null,
-    }),
-  );
   while (current && current !== doc.body && current !== doc.documentElement) {
     const selector = buildStableSelector(current);
     const hfId = readHfId(current);
@@ -380,16 +369,6 @@ export async function resolveDomEditSelection(
     });
     const rect = current.getBoundingClientRect();
 
-    // eslint-disable-next-line no-console
-    console.log(
-      "[HF-DBG] resolveDomEditSelection → resolved",
-      JSON.stringify({
-        element: current.id || current.getAttribute("data-hf-group") || current.tagName,
-        selector,
-        isGroup: current.hasAttribute("data-hf-group"),
-        canApplyManualOffset: capabilities.canApplyManualOffset,
-      }),
-    );
     return {
       element: current,
       id: current.id || undefined,
