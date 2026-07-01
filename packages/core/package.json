@@ -203,6 +203,12 @@
       "import": "./src/fonts/systemFontLocator.ts",
       "types": "./src/fonts/systemFontLocator.ts"
     },
+    "./figma": {
+      "bun": "./src/figma/index.ts",
+      "node": "./dist/figma/index.js",
+      "import": "./src/figma/index.ts",
+      "types": "./src/figma/index.ts"
+    },
     "./schemas/registry.json": "./schemas/registry.json",
     "./schemas/registry-item.json": "./schemas/registry-item.json"
   },
