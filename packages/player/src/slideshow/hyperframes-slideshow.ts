@@ -190,6 +190,7 @@ export class HyperframesSlideshow extends HTMLElement {
   private initGeneration = 0;
   private keyForwardFrame: HTMLIFrameElement | null = null;
   private detachIframeKeys: (() => void) | null = null;
+  private warnedIframeKeyForwardingUnavailable = false;
   private _muted = false;
   private mediaWireInterval: ReturnType<typeof setInterval> | null = null;
   private playerObserver: MutationObserver | null = null;
@@ -319,23 +320,13 @@ export class HyperframesSlideshow extends HTMLElement {
     // boot as an unsynced second presenter.
     const url = new URL(location.href);
     url.searchParams.set("mode", "audience");
-    // No features string: a non-empty one (e.g. "noopener") makes Chrome open a
-    // popup WINDOW, which freezes (rAF throttled) when fully occluded — breaking
-    // screen-share presenting (Google Meet/Zoom). A TAB can be shared via Meet's
-    // "A tab", which keeps the captured tab rendering while backgrounded. The
-    // audience must not get a reference back to this window (sync is over
-    // BroadcastChannel), so sever opener manually instead of using noopener.
-    const audience = window.open(url.href, "_blank");
-    if (!audience) {
-      // Popup blocked / no user activation: don't flip into presenter layout —
-      // there is no audience tab and no exit-presenter affordance.
+    // Anchor click, not window.open(features): rel="noopener noreferrer" severs
+    // opener at creation time while Chrome still opens a regular tab. Passing a
+    // non-empty features string tends to create a popup WINDOW, which freezes
+    // when fully covered during screen share.
+    if (!this.openAudienceTab(url.href)) {
       console.warn("[hyperframes-slideshow] present(): browser blocked the audience tab");
       return;
-    }
-    try {
-      audience.opener = null;
-    } catch {
-      // Some environments (e.g. happy-dom) expose opener as getter-only.
     }
     this.setAttribute("data-hf-presenting", "true");
     this.postCurrentPresenterPositionBurst();
@@ -344,6 +335,22 @@ export class HyperframesSlideshow extends HTMLElement {
       this.presenterInterval = setInterval(() => this.updateElapsed(), 1000);
     }
     this.render();
+  }
+
+  private openAudienceTab(href: string): boolean {
+    const userActivation = (navigator as Navigator & { userActivation?: { isActive?: boolean } })
+      .userActivation;
+    if (userActivation && userActivation.isActive === false) return false;
+
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    anchor.style.display = "none";
+    (document.body ?? document.documentElement).appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    return true;
   }
 
   /**
@@ -585,7 +592,8 @@ export class HyperframesSlideshow extends HTMLElement {
    * decks move focus into the iframe when the presenter clicks a slide, and
    * top-window keydown stops firing — without this, arrow keys stop controlling
    * the deck after any in-slide click. Same-origin frames only (cross-origin
-   * access throws → degrade silently). Re-attached on every iframe `load`,
+   * access throws → warn once and leave top-window shortcuts working).
+   * Re-attached on every iframe `load`,
    * because a navigation clears listeners the parent added to the content
    * window.
    */
@@ -598,7 +606,7 @@ export class HyperframesSlideshow extends HTMLElement {
         // addEventListener dedupes same handler+target, so re-runs are safe.
         frame.contentWindow?.addEventListener("keydown", this.onKey);
       } catch {
-        // Cross-origin composition — keyboard forwarding unavailable.
+        this.warnIframeKeyForwardingUnavailable();
       }
     };
     attach();
@@ -609,11 +617,19 @@ export class HyperframesSlideshow extends HTMLElement {
       try {
         frame.contentWindow?.removeEventListener("keydown", this.onKey);
       } catch {
-        // Frame already gone or cross-origin — nothing to detach.
+        this.warnIframeKeyForwardingUnavailable();
       }
       this.keyForwardFrame = null;
       this.detachIframeKeys = null;
     };
+  }
+
+  private warnIframeKeyForwardingUnavailable(): void {
+    if (this.warnedIframeKeyForwardingUnavailable) return;
+    this.warnedIframeKeyForwardingUnavailable = true;
+    console.warn(
+      "[hyperframes-slideshow] iframe keyboard forwarding is unavailable for this composition, likely because the player iframe is cross-origin. Arrow shortcuts work when focus is outside the iframe.",
+    );
   }
 
   private playerFrameDocument(player: Partial<PlayerElement> & HTMLElement): Document | null {
