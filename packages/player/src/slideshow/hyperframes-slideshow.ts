@@ -196,7 +196,7 @@ export class HyperframesSlideshow extends HTMLElement {
   }
 
   /** Mode resolves from the `mode` attribute, falling back to the URL query
-   *  (?mode=audience) so the audience window opened by present() is detected. */
+   *  (?mode=audience) so the audience tab opened by present() is detected. */
   private resolveMode(): string | null {
     const attr = this.getAttribute("mode");
     if (attr) return attr;
@@ -295,17 +295,36 @@ export class HyperframesSlideshow extends HTMLElement {
   }
 
   /**
-   * Opens an audience window and switches this element to presenter layout.
-   * Audience window URL: current page URL with `mode=audience` query param.
+   * Opens an audience tab and switches this element to presenter layout.
+   * Audience tab URL: current page URL with `mode=audience` query param.
    */
   present(): void {
     if (this.resolveMode() === "audience" || this.getAttribute("data-hf-presenting") === "true") {
       return;
     }
-    const sep = location.search ? "&" : "?";
-    // noopener,noreferrer: the audience window must not get a reference back to
-    // this window (it syncs over BroadcastChannel, not window.opener).
-    window.open(location.href + sep + "mode=audience", "_blank", "noopener,noreferrer");
+    // URL API, not string concat: with a #fragment in the page URL, appending
+    // "?mode=audience" would land inside the fragment and the opened tab would
+    // boot as an unsynced second presenter.
+    const url = new URL(location.href);
+    url.searchParams.set("mode", "audience");
+    // No features string: a non-empty one (e.g. "noopener") makes Chrome open a
+    // popup WINDOW, which freezes (rAF throttled) when fully occluded — breaking
+    // screen-share presenting (Google Meet/Zoom). A TAB can be shared via Meet's
+    // "A tab", which keeps the captured tab rendering while backgrounded. The
+    // audience must not get a reference back to this window (sync is over
+    // BroadcastChannel), so sever opener manually instead of using noopener.
+    const audience = window.open(url.href, "_blank");
+    if (!audience) {
+      // Popup blocked / no user activation: don't flip into presenter layout —
+      // there is no audience tab and no exit-presenter affordance.
+      console.warn("[hyperframes-slideshow] present(): browser blocked the audience tab");
+      return;
+    }
+    try {
+      audience.opener = null;
+    } catch {
+      // Some environments (e.g. happy-dom) expose opener as getter-only.
+    }
     this.setAttribute("data-hf-presenting", "true");
     this.postCurrentPresenterPositionBurst();
     this.presenterStartMs = Date.now();
@@ -732,7 +751,6 @@ export class HyperframesSlideshow extends HTMLElement {
 
   // fallow-ignore-next-line complexity
   private onKey = (e: KeyboardEvent): void => {
-    if (!this.controller) return;
     const target = e.target;
     if (
       target instanceof HTMLInputElement ||
@@ -751,6 +769,16 @@ export class HyperframesSlideshow extends HTMLElement {
     // doesn't drive every instance at once — only the focused deck responds.
     const multiInstance = document.querySelectorAll("hyperframes-slideshow").length > 1;
     const ambient = focused || (!multiInstance && (active === document.body || active === null));
+    // P is handled BEFORE the controller guard: present() doesn't need the
+    // controller, and on a slow-loading deck the advertised shortcut must work
+    // immediately rather than silently doing nothing until the controller binds.
+    if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (!ambient || !this.shouldShowPresentControl()) return;
+      this.present();
+      e.preventDefault();
+      return;
+    }
+    if (!this.controller) return;
     if (e.key === "ArrowRight") {
       if (!ambient) return;
       this.controller.next();
@@ -770,10 +798,6 @@ export class HyperframesSlideshow extends HTMLElement {
     } else if ((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey && !e.altKey) {
       if (!focused) return;
       this.toggleFullscreen();
-      e.preventDefault();
-    } else if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      if (!ambient || !this.shouldShowPresentControl()) return;
-      this.present();
       e.preventDefault();
     }
   };
