@@ -28,6 +28,13 @@
  *   here — gated on a perf spike.
  */
 
+import {
+  EDIT_BASE_X_ATTR,
+  EDIT_BASE_Y_ATTR,
+  EDIT_ORIGINAL_TRANSLATE_ATTR,
+  applyPositionEditToElement,
+  composeTranslate,
+} from "@hyperframes/core/runtime/position-edits";
 import type { PreviewAdapter, ElementAtPointResult, DraftProps } from "./types.js";
 import type { EditOp } from "../types.js";
 
@@ -468,6 +475,22 @@ function imageAlphaOpaqueAt(
   }
 }
 
+/**
+ * The element's effective `translate` before a drag starts: inline value if
+ * set, computed otherwise (covers stylesheet-authored translate). "" = none.
+ */
+function readPreDraftTranslate(el: HTMLElement): string {
+  const inline = el.style.getPropertyValue("translate").trim();
+  if (inline) return inline === "none" ? "" : inline;
+  try {
+    const view = el.ownerDocument?.defaultView;
+    const computed = view ? view.getComputedStyle(el).getPropertyValue("translate").trim() : "";
+    return computed === "none" ? "" : computed;
+  } catch {
+    return "";
+  }
+}
+
 // ─── IframePreviewAdapter ─────────────────────────────────────────────────────
 
 /**
@@ -492,6 +515,12 @@ class IframePreviewAdapter implements PreviewAdapter {
   /** Tracked id and element for the in-progress drag. */
   private _draftId: string | null = null;
   private _draftEl: HTMLElement | null = null;
+  /**
+   * The element's inline `translate` when the drag started (or the computed
+   * value when no inline one was set; "" = none). Drafts compose onto this;
+   * cancelPreview restores it.
+   */
+  private _draftPrevTranslate: string | null = null;
 
   constructor(iframe: HTMLIFrameElement, dispatch?: (op: EditOp) => void) {
     this.iframe = iframe;
@@ -543,9 +572,12 @@ class IframePreviewAdapter implements PreviewAdapter {
   }
 
   /**
-   * Write draft CSS custom properties (`--hf-studio-dx`, `--hf-studio-dy`) onto
-   * the target element inside the iframe at 60fps. The composition's CSS uses
-   * these vars to visually translate the element without touching the model.
+   * Visually translate the target element inside the iframe at 60fps without
+   * touching the model: sets the element's `translate` to its pre-drag value
+   * composed with the accumulated delta. `translate` set after GSAP's first
+   * parse is untouched by seeks, so this renders correctly on animated
+   * elements too. Also writes the `--hf-studio-dx/dy` custom properties for
+   * compositions whose CSS consumes them (the authored Studio drag bridge).
    *
    * Calling applyDraft with a new id replaces the tracked element (does not
    * cancel the prior draft — call cancelPreview first if switching targets).
@@ -553,24 +585,42 @@ class IframePreviewAdapter implements PreviewAdapter {
    * width/height in DraftProps are not yet wired (resize → setStyle, future op).
    */
   applyDraft(id: string, props: DraftProps): void {
-    const doc = this.iframe.contentDocument;
-    if (!doc) return;
+    const el = this._resolveDraftElement(id);
+    if (!el) return;
 
-    // Reuse the tracked element across the 60fps drag; only re-query when the id
-    // changes or the cached node detached (e.g. an iframe reload mid-drag).
+    if (props.dx !== undefined) el.style.setProperty(VAR_DX, String(props.dx));
+    if (props.dy !== undefined) el.style.setProperty(VAR_DY, String(props.dy));
+
+    const dx = parseFloat(el.style.getPropertyValue(VAR_DX) || "0") || 0;
+    const dy = parseFloat(el.style.getPropertyValue(VAR_DY) || "0") || 0;
+    el.style.setProperty(
+      "translate",
+      composeTranslate(this._draftPrevTranslate ?? "", `${dx}px`, `${dy}px`),
+    );
+  }
+
+  /**
+   * Resolve and track the drag target. Reuses the tracked element across the
+   * 60fps drag; only re-queries when the id changes or the cached node
+   * detached (e.g. an iframe reload mid-drag). Captures the pre-drag translate
+   * when the tracked element changes.
+   */
+  private _resolveDraftElement(id: string): HTMLElement | null {
+    const doc = this.iframe.contentDocument;
+    if (!doc) return null;
+
     const cached = id === this._draftId && this._draftEl?.isConnected ? this._draftEl : null;
     const el =
       cached ??
       doc.querySelector<HTMLElement>(
         `[data-hf-id="${id.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"]`,
       );
-    if (!el) return;
+    if (!el) return null;
 
+    if (el !== this._draftEl) this._draftPrevTranslate = readPreDraftTranslate(el);
     this._draftId = id;
     this._draftEl = el;
-
-    if (props.dx !== undefined) el.style.setProperty(VAR_DX, String(props.dx));
-    if (props.dy !== undefined) el.style.setProperty(VAR_DY, String(props.dy));
+    return el;
   }
 
   /**
@@ -583,6 +633,7 @@ class IframePreviewAdapter implements PreviewAdapter {
    */
   commitPreview(): void {
     if (!this._draftId || !this._draftEl || !this._dispatch) {
+      this._revertDraftTranslate();
       this._clearDraft();
       return;
     }
@@ -595,12 +646,60 @@ class IframePreviewAdapter implements PreviewAdapter {
     const { x, y } = computeDraftPosition(dataX, dataY, dx, dy);
 
     this._dispatch({ type: "moveElement", target: this._draftId, x, y });
+    this._mirrorCommittedMove(el, dataX, dataY, x, y);
     this._clearDraft();
   }
 
-  /** Revert draft CSS vars without dispatching any op. */
+  /**
+   * Mirror a committed move onto the live element so the position holds
+   * without a document reload — same attributes handleMoveElement writes
+   * into the model, rendered by the runtime's position-edit translate.
+   *
+   * The pre-edit translate is stamped from the value captured at drag start
+   * (the element's current inline translate is the draft-composed one, which
+   * must not be mistaken for the original), then the final translate is
+   * recomputed the same way the runtime does at bind time.
+   */
+  private _mirrorCommittedMove(
+    el: HTMLElement,
+    dataX: string | null,
+    dataY: string | null,
+    x: number,
+    y: number,
+  ): void {
+    if (el.getAttribute(EDIT_BASE_X_ATTR) === null) {
+      el.setAttribute(EDIT_BASE_X_ATTR, dataX ?? "0");
+    }
+    if (el.getAttribute(EDIT_BASE_Y_ATTR) === null) {
+      el.setAttribute(EDIT_BASE_Y_ATTR, dataY ?? "0");
+    }
+    if (el.getAttribute(EDIT_ORIGINAL_TRANSLATE_ATTR) === null) {
+      el.setAttribute(EDIT_ORIGINAL_TRANSLATE_ATTR, this._draftPrevTranslate ?? "");
+    }
+    el.setAttribute("data-x", String(x));
+    el.setAttribute("data-y", String(y));
+    applyPositionEditToElement(el);
+  }
+
+  /** Revert the draft translate and CSS vars without dispatching any op. */
   cancelPreview(): void {
+    this._revertDraftTranslate();
     this._clearDraft();
+  }
+
+  /**
+   * Restore the element's pre-drag `translate`. NOT called on a successful
+   * commit — the draft-composed value numerically equals the newly committed
+   * position-edit translate, so it stays (and the runtime hook recomputes it
+   * from the mirrored attributes anyway).
+   */
+  private _revertDraftTranslate(): void {
+    if (!this._draftEl || this._draftPrevTranslate === null) return;
+    if (this._draftPrevTranslate === "") {
+      this._draftEl.style.removeProperty("translate");
+    } else {
+      this._draftEl.style.setProperty("translate", this._draftPrevTranslate);
+    }
   }
 
   private _clearDraft(): void {
@@ -610,6 +709,7 @@ class IframePreviewAdapter implements PreviewAdapter {
     }
     this._draftId = null;
     this._draftEl = null;
+    this._draftPrevTranslate = null;
   }
 
   // Selection -----------------------------------------------------------------

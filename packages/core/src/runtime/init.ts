@@ -28,6 +28,7 @@ import { createRuntimeStartTimeResolver } from "./startResolver";
 import { createClipTree } from "./clipTree";
 import { loadExternalCompositions, loadInlineTemplateCompositions } from "./compositionLoader";
 import { applyCaptionOverrides } from "./captionOverrides";
+import { applyPositionEdits } from "./positionEdits";
 import { createColorGradingRuntime, type RuntimeColorGradingApi } from "./colorGrading";
 import { TransportClock } from "./clock";
 import { WebAudioTransport } from "./webAudioTransport";
@@ -72,6 +73,9 @@ function resolveExportRenderFps(): ExportRenderFpsResolution {
 
 export function initSandboxRuntimeModular(): void {
   const state = createRuntimeState();
+  // Host hook: re-render SDK position edits after a live data-x/data-y write
+  // (e.g. the SDK iframe adapter's commitPreview) without a document reload.
+  (window as Record<string, unknown>).__hfApplyPositionEdits = () => applyPositionEdits(document);
   const exportRenderFps = resolveExportRenderFps();
   state.canonicalFps = exportRenderFps.fps ?? state.canonicalFps;
   if (window.__HF_EXPORT_RENDER_SEEK_CONFIG) {
@@ -1189,6 +1193,12 @@ export function initSandboxRuntimeModular(): void {
       // during initial rebind (timing race on first load / soft reload).
       const applyFn = (window as Record<string, unknown>).__hfStudioManualEditsApply;
       if (typeof applyFn === "function") applyFn();
+
+      // SDK moveElement edits (data-hf-edit-base-x/y markers) render as a
+      // CSS translate delta. Must run after the timeline is bound so GSAP has
+      // already parsed the elements — a translate present at first parse gets
+      // folded into the cached transform and lost per-axis on seek.
+      applyPositionEdits(document);
     }
     if (resolution.diagnostics) {
       postRuntimeMessage({
