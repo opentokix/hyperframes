@@ -821,6 +821,15 @@ export class HyperframesSlideshow extends HTMLElement {
     // from the composition iframe, whose elements are instances of the IFRAME
     // realm's classes — instanceof against this realm's would never match.
     if (isTextEntryTarget(e.target)) return;
+    // The audience view follows the presenter over BroadcastChannel; local nav
+    // keys would silently de-sync it until the presenter's next goto. Ignore
+    // them entirely in audience mode (F/fullscreen still works below).
+    if (
+      this.resolveMode() === "audience" &&
+      (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === " " || e.key === "Backspace")
+    ) {
+      return;
+    }
     const active = document.activeElement;
     // With focus inside the composition iframe, the top document's activeElement
     // is the <iframe> itself — contained by this element, so `focused` stays true

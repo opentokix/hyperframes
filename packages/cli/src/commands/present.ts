@@ -193,13 +193,17 @@ function buildPresentPage(projectName: string, islandJson: string): string {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escHtml(projectName)} — Presenter</title>
+    <title>${escHtml(projectName)}</title>
     <script>
-      // Retitle the audience tab so the two tabs are distinguishable in the
-      // browser tab strip and in Meet's "Share a tab" picker.
-      if (new URLSearchParams(location.search).get("mode") === "audience") {
-        document.title = ${JSON.stringify(projectName).replace(/</g, "\\u003c")} + " — Audience";
-      }
+      // Role suffix distinguishes the two tabs in the tab strip and in Meet's
+      // "Share a tab" picker. Set from ?mode= for BOTH roles (rather than a
+      // static "— Presenter" default) so the audience tab never flashes the
+      // wrong role before this script runs.
+      document.title =
+        ${JSON.stringify(projectName).replace(/</g, "\\u003c")} +
+        (new URLSearchParams(location.search).get("mode") === "audience"
+          ? " — Audience"
+          : " — Presenter");
     </script>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }

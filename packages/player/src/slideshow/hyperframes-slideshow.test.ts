@@ -713,6 +713,37 @@ describe("<hyperframes-slideshow> presenter mode", () => {
     el.remove();
   });
 
+  it("audience mode: ignores local nav keys (channel-driven only)", () => {
+    // Local arrows in the audience view would silently de-sync it from the
+    // presenter until the next goto; nav keys are ignored in audience mode.
+    const el = document.createElement("hyperframes-slideshow") as any;
+    el.setAttribute("mode", "audience");
+    document.body.appendChild(el);
+    let nexts = 0;
+    el.__setControllerForTest({
+      next: () => {
+        nexts++;
+      },
+      prev: () => {},
+      goToSlide: () => {},
+      onChange: () => () => {},
+      counter: { index: 1, total: 3 },
+      breadcrumb: [{ id: "main", label: "Main deck" }],
+      currentSlide: { hotspots: [] },
+      nextSlide: null,
+      get position() {
+        return MAIN_POS;
+      },
+    });
+
+    el.focus();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+    expect(nexts).toBe(0);
+
+    el.remove();
+  });
+
   it("audience mode: mirrors a branch position too (full sequenceId forwarded to syncTo)", async () => {
     const presenterChannel = new BroadcastChannel(slideshowChannelName());
     const { el, getLastSync } = makeAudienceEl();
@@ -1071,6 +1102,9 @@ describe("<hyperframes-slideshow> presenter mode", () => {
 
     // Text-entry targets inside the iframe must NOT navigate (duck-typed guard —
     // iframe-realm elements are not instanceof this realm's classes).
+    // NOTE: happy-dom shares one realm across frames, so this asserts the guard
+    // fires — it cannot distinguish duck-typing from instanceof; only a real
+    // browser exercises the cross-realm case.
     const doc = iframe.contentDocument;
     if (doc) {
       const input = doc.createElement("input");
