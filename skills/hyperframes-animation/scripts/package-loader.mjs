@@ -63,18 +63,12 @@ export function hyperframesPackageSpec(packageName) {
   const version = readBundledHyperframesVersion();
   if (version) return `${packageName}@${version}`;
 
-  // Global skill installs (e.g. ~/.claude/skills) have no hyperframes package.json
-  // in their ancestor chain, so the bundled version is unknowable. Fall back to
-  // @latest instead of throwing: already-installed packages still import, and a
-  // bootstrap install can still proceed (@latest satisfies the pinned-spec guard).
-  process.stderr.write(
+  throw new Error(
     [
-      `hyperframes: could not determine the bundled version for ${packageName}; using @latest.`,
-      `Set ${VERSION_OVERRIDE_ENV}=<version> to pin it.`,
-      "",
+      `hyperframes: could not determine the bundled version for ${packageName}.`,
+      `Set ${VERSION_OVERRIDE_ENV}=<version> to allow dependency bootstrap.`,
     ].join("\n"),
   );
-  return `${packageName}@latest`;
 }
 
 function resolvePackageEntry(packageName) {
@@ -109,6 +103,9 @@ function readBundledHyperframesVersion() {
       join(ancestor, "packages", "cli", "package.json"),
     );
     if (monorepoCliVersion) return monorepoCliVersion;
+
+    const pluginVersion = readCodexPluginVersion(join(ancestor, ".codex-plugin", "plugin.json"));
+    if (pluginVersion) return pluginVersion;
   }
   return null;
 }
@@ -121,6 +118,18 @@ function readPackageVersion(packageJsonPath) {
     }
   } catch {
     // Keep searching ancestor package manifests.
+  }
+  return null;
+}
+
+function readCodexPluginVersion(pluginJsonPath) {
+  try {
+    const manifest = JSON.parse(readFileSync(pluginJsonPath, "utf8"));
+    if (manifest.name === "hyperframes") {
+      return typeof manifest.version === "string" ? manifest.version : null;
+    }
+  } catch {
+    // Keep searching ancestor plugin manifests.
   }
   return null;
 }

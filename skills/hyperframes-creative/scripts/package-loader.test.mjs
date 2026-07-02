@@ -35,10 +35,10 @@ test("hyperframesPackageSpec: resolvable in-repo version pins it", async () => {
   }
 });
 
-// (c) unresolvable + no override -> @latest fallback, no throw (global-install case).
+// (c) unresolvable + no override -> fail closed rather than bootstrapping @latest.
 // Copy the loader into an isolated temp dir whose ancestor chain has no hyperframes
 // package.json, and run node from there so cwd cannot resolve one either.
-test("hyperframesPackageSpec: unresolvable falls back to @latest without throwing", () => {
+test("hyperframesPackageSpec: unresolvable requires an explicit version override", () => {
   const dir = mkdtempSync(join(tmpdir(), "hf-pkgloader-"));
   try {
     copyFileSync(join(HERE, "package-loader.mjs"), join(dir, "package-loader.mjs"));
@@ -52,9 +52,9 @@ test("hyperframesPackageSpec: unresolvable falls back to @latest without throwin
       ].join("\n"),
     );
     const res = spawnSync(process.execPath, [probe], { cwd: dir, encoding: "utf8" });
-    assert.equal(res.status, 0, res.stderr);
-    assert.equal(res.stdout.trim(), "@hyperframes/producer@latest");
-    assert.match(res.stderr, /using @latest/);
+    assert.notEqual(res.status, 0);
+    assert.equal(res.stdout.trim(), "");
+    assert.match(res.stderr, /could not determine the bundled version/);
     assert.match(res.stderr, new RegExp(ENV));
   } finally {
     rmSync(dir, { recursive: true, force: true });

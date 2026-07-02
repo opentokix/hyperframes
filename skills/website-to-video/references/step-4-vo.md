@@ -58,12 +58,12 @@ Ask the user which voice provider they'd like:
 > 2. **ElevenLabs** — Large voice library, very natural output. Requires ElevenLabs API key. Does not return word timestamps — you'll transcribe separately.
 > 3. **Kokoro** (Free) — Runs locally, no API key needed. Decent quality but more robotic than the others. Good for drafts or budget runs.
 
-If the user picks ElevenLabs or HeyGen and doesn't have a key set up yet, help them:
+If the user picks ElevenLabs or HeyGen and doesn't have a key set up yet, help them configure credentials outside the conversation. Do **not** ask the user to paste API keys or bearer tokens into chat.
 
-- **ElevenLabs:** "Add `ELEVENLABS_API_KEY=your-key` to a `.env` file in the project root, or just paste it here and I'll set it up."
-- **HeyGen:** "Add `HEYGEN_API_KEY=your-key` to a `.env` file, or paste it here."
+- **ElevenLabs:** Ask the user to set `ELEVENLABS_API_KEY` in their shell or in a local project `.env` file that they create.
+- **HeyGen:** Prefer `npx hyperframes auth login`. If they need an account API key instead, ask them to set `HEYGEN_API_KEY` in their shell or in a local project `.env` file that they create.
 
-Don't judge or critique if the user pastes a key directly in chat — just use it and move on.
+After setup, verify with a command that reports status without printing the secret value.
 
 ## Audition voices
 
@@ -71,8 +71,7 @@ After the provider is selected, audition at least 2 voices with the first senten
 
 **ElevenLabs:**
 
-- If the ElevenLabs MCP is available: use `mcp__elevenlabs__search_voices` to browse, `mcp__elevenlabs__text_to_speech` to generate.
-- If no MCP: call the REST API directly:
+- With `ELEVENLABS_API_KEY` configured, call the REST API directly:
 
   ```bash
   # List voices
@@ -91,8 +90,7 @@ After the provider is selected, audition at least 2 voices with the first senten
 
 **HeyGen TTS:**
 
-- If the HeyGen MCP is available: use the TTS tool directly.
-- If no MCP: use the v3 API (current; v1/v2 deprecated, supported until Oct 2026). **Auth depends on credential type:** the `x-api-key` header below works only with an **account API key** (`HEYGEN_API_KEY`). If you authenticated via **OAuth** (e.g. claude.ai / the HeyGen MCP login), `x-api-key` will 401 — send `Authorization: Bearer $HEYGEN_OAUTH_TOKEN` instead, or just use the MCP TTS tool above.
+- With `HEYGEN_API_KEY` configured, use the v3 API (current; v1/v2 deprecated, supported until Oct 2026). The `x-api-key` header below works only with an **account API key**. For browser OAuth from `npx hyperframes auth login`, prefer the HyperFrames media scripts or `npx hyperframes auth status` instead of manually handling bearer tokens.
 
   ```bash
   # List voices — response shape: { "data": [...], "has_more": bool }
@@ -126,7 +124,7 @@ After the provider is selected, audition at least 2 voices with the first senten
 npx hyperframes tts SCRIPT.md --voice af_nova --output narration.wav
 ```
 
-No API key, no MCP needed. Runs locally. Use `--list` to see all 54 available voices.
+No API key needed. Runs locally. Use `--list` to see all 54 available voices.
 
 Pick the voice that sounds most natural and conversational. Listen for pacing — does it breathe between sentences? Does it sound like a person or a robot?
 
