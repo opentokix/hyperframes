@@ -903,7 +903,11 @@ describe("template-wrapped sub-composition media offsets", () => {
     const host = document.querySelector("#scene-host");
 
     expect(host?.getAttribute("data-composition-id")).toBeNull();
-    expect(host?.querySelector('[data-composition-id="scene"] .title')?.textContent).toBe("Scene");
+    // The flattened inner root strips data-composition-id (same as the bundler's
+    // prepareFlattenedInnerRoot), so an anonymous host's content is only reachable
+    // via the preserved wrapper, not a [data-composition-id="scene"] selector —
+    // this matches preview parity, not a producer-specific contract.
+    expect(host?.querySelector("[data-hf-inner-root] .title")?.textContent).toBe("Scene");
     expect(compiled.html).toContain('var __hfCompId = "scene";');
   });
 });
