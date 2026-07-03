@@ -23,12 +23,14 @@ import {
 } from "../components/editor/domEditing";
 import type { ImportedFontAsset } from "../components/editor/fontAssets";
 import type { PersistDomEditOperations } from "./domEditCommitTypes";
+import { reportDomEditPersistFailure } from "./domEditPersistFailure";
 
 // ── Types ──
 
 export interface UseDomEditTextCommitsParams {
   activeCompPath: string | null;
   previewIframeRef: React.MutableRefObject<HTMLIFrameElement | null>;
+  showToast: (message: string, tone?: "error" | "info") => void;
   domEditSelection: DomEditSelection | null;
   applyDomSelection: (
     selection: DomEditSelection | null,
@@ -75,6 +77,7 @@ interface DataAttributeCommitOptions {
 export function useDomEditTextCommits({
   activeCompPath,
   previewIframeRef,
+  showToast,
   domEditSelection,
   applyDomSelection,
   refreshDomEditSelectionFromPreview,
@@ -92,9 +95,13 @@ export function useDomEditTextCommits({
       const importedFont = property === "font-family" ? resolveImportedFontAsset(value) : null;
       const iframe = previewIframeRef.current;
       const doc = iframe?.contentDocument;
+      let editedElement: HTMLElement | null = null;
+      let previousInlineValue: string | null = null;
       if (doc) {
         const el = findElementForSelection(doc, domEditSelection, activeCompPath);
         if (el) {
+          editedElement = el;
+          previousInlineValue = el.style.getPropertyValue(property);
           el.style.setProperty(property, normalizeDomEditStyleValue(property, value));
           if (property === "font-family") {
             injectPreviewGoogleFont(doc, value);
@@ -126,7 +133,17 @@ export function useDomEditTextCommits({
             ? (html, sourceFile) => ensureImportedFontFace(html, importedFont, sourceFile)
             : undefined,
         });
-      } catch {}
+      } catch (error) {
+        if (editedElement && previousInlineValue !== null) {
+          // ponytail: background-image side-effect styles are not reverted here.
+          if (previousInlineValue === "") {
+            editedElement.style.removeProperty(property);
+          } else {
+            editedElement.style.setProperty(property, previousInlineValue);
+          }
+        }
+        reportDomEditPersistFailure(domEditSelection, operations, error, showToast);
+      }
       refreshDomEditSelectionFromPreview(domEditSelection);
     },
     [
@@ -135,6 +152,7 @@ export function useDomEditTextCommits({
       persistDomEditOperations,
       refreshDomEditSelectionFromPreview,
       resolveImportedFontAsset,
+      showToast,
       previewIframeRef,
     ],
   );
@@ -160,7 +178,9 @@ export function useDomEditTextCommits({
           coalesceKey: `${options.coalescePrefix}:${attr}:${getDomEditTargetKey(domEditSelection)}`,
           skipRefresh: options.skipRefresh,
         });
-      } catch {}
+      } catch (error) {
+        reportDomEditPersistFailure(domEditSelection, [op], error, showToast);
+      }
       if (options.refreshAfter) {
         refreshDomEditSelectionFromPreview(domEditSelection);
       }
@@ -170,6 +190,7 @@ export function useDomEditTextCommits({
       domEditSelection,
       persistDomEditOperations,
       refreshDomEditSelectionFromPreview,
+      showToast,
       previewIframeRef,
     ],
   );
@@ -220,7 +241,9 @@ export function useDomEditTextCommits({
           coalesceKey: `html-attr:${attr}:${getDomEditTargetKey(domEditSelection)}`,
           skipRefresh: false,
         });
-      } catch {}
+      } catch (error) {
+        reportDomEditPersistFailure(domEditSelection, [op], error, showToast);
+      }
       refreshDomEditSelectionFromPreview(domEditSelection);
     },
     [
@@ -228,6 +251,7 @@ export function useDomEditTextCommits({
       domEditSelection,
       persistDomEditOperations,
       refreshDomEditSelectionFromPreview,
+      showToast,
       previewIframeRef,
     ],
   );
@@ -263,15 +287,16 @@ export function useDomEditTextCommits({
           }
         }
       }
-      await persistDomEditOperations(
-        domEditSelection,
-        [buildDomEditTextPatchOperation(nextContent)],
-        {
+      const operations = [buildDomEditTextPatchOperation(nextContent)];
+      try {
+        await persistDomEditOperations(domEditSelection, operations, {
           label: "Edit text",
           skipRefresh: true,
           shouldSave: () => domTextCommitVersionRef.current === commitVersion,
-        },
-      );
+        });
+      } catch (error) {
+        reportDomEditPersistFailure(domEditSelection, operations, error, showToast);
+      }
       if (domTextCommitVersionRef.current !== commitVersion) return;
 
       if (doc) {
@@ -291,6 +316,7 @@ export function useDomEditTextCommits({
       domEditSelection,
       persistDomEditOperations,
       previewIframeRef,
+      showToast,
     ],
   );
 
@@ -322,13 +348,18 @@ export function useDomEditTextCommits({
       }
 
       const importedFont = options?.importedFont ?? null;
-      await persistDomEditOperations(selection, [buildDomEditTextPatchOperation(nextContent)], {
-        label: "Edit text",
-        skipRefresh: true,
-        prepareContent: importedFont
-          ? (html, sourceFile) => ensureImportedFontFace(html, importedFont, sourceFile)
-          : undefined,
-      });
+      const operations = [buildDomEditTextPatchOperation(nextContent)];
+      try {
+        await persistDomEditOperations(selection, operations, {
+          label: "Edit text",
+          skipRefresh: true,
+          prepareContent: importedFont
+            ? (html, sourceFile) => ensureImportedFontFace(html, importedFont, sourceFile)
+            : undefined,
+        });
+      } catch (error) {
+        reportDomEditPersistFailure(selection, operations, error, showToast);
+      }
 
       if (doc) {
         const refreshed = findElementForSelection(doc, selection, activeCompPath);
@@ -346,6 +377,7 @@ export function useDomEditTextCommits({
       buildDomSelectionFromTarget,
       persistDomEditOperations,
       previewIframeRef,
+      showToast,
     ],
   );
 
