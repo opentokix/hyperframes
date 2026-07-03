@@ -1,7 +1,15 @@
 // fallow-ignore-file complexity
 import { spawn } from "node:child_process";
 import { defineCommand } from "citty";
-import { existsSync, mkdtempSync, readFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join, relative, isAbsolute, basename } from "node:path";
 import { resolveProject } from "../utils/project.js";
@@ -178,6 +186,25 @@ export function computeSnapshotTimes(
 }
 
 /**
+ * Deletes existing .png/.jpg/.jpeg files from a snapshot output directory.
+ * Pure enough to unit test directly: two consecutive `snapshot` runs with
+ * different --at sets otherwise clobber each other's output with no way to
+ * opt out, since every run wiped the directory unconditionally before this
+ * was made a separate, disableable step (see the `clean` flag).
+ */
+export function cleanSnapshotDir(dir: string): void {
+  try {
+    for (const file of readdirSync(dir)) {
+      if (/\.(png|jpg|jpeg)$/i.test(file)) {
+        rmSync(join(dir, file), { force: true });
+      }
+    }
+  } catch {
+    /* best-effort — proceed even if cleanup fails */
+  }
+}
+
+/**
  * Render key frames from a composition as PNG screenshots.
  * The agent can Read these to verify its output visually.
  */
@@ -190,6 +217,7 @@ async function captureSnapshots(
     outputDir?: string;
     angle?: Camera;
     includeEnd?: boolean;
+    clean?: boolean;
   },
 ): Promise<string[]> {
   const { bundleToSingleHtml } = await import("@hyperframes/core/compiler");
@@ -343,16 +371,7 @@ async function captureSnapshots(
 
       const snapshotDir = opts.outputDir ?? join(projectDir, "snapshots");
       mkdirSync(snapshotDir, { recursive: true });
-      try {
-        const { readdirSync } = await import("node:fs");
-        for (const file of readdirSync(snapshotDir)) {
-          if (/\.(png|jpg|jpeg)$/i.test(file)) {
-            rmSync(join(snapshotDir, file), { force: true });
-          }
-        }
-      } catch {
-        /* best-effort — proceed even if cleanup fails */
-      }
+      if (opts.clean !== false) cleanSnapshotDir(snapshotDir);
 
       // Chrome-headless ignores programmatic <video>.currentTime writes, so
       // we extract frames via FFmpeg and overlay them as <img> elements.
@@ -581,6 +600,12 @@ export default defineCommand({
         "Always include a readable end-of-timeline frame (default: true). Pass --no-end to capture only your exact --at times.",
       default: true,
     },
+    clean: {
+      type: "boolean",
+      description:
+        "Delete existing .png/.jpg files in the output directory before capturing (default: true). Pass --no-clean to preserve them — useful for running snapshot multiple times with different --at sets without each run clobbering the last.",
+      default: true,
+    },
     describe: {
       type: "string",
       description:
@@ -630,6 +655,7 @@ export default defineCommand({
         outputDir: snapshotDir,
         angle: camera,
         includeEnd: args.end !== false,
+        clean: args.clean !== false,
       });
 
       if (paths.length === 0) {

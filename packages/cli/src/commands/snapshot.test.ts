@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeSnapshotTimes, tailFrameTime } from "./snapshot.js";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { cleanSnapshotDir, computeSnapshotTimes, tailFrameTime } from "./snapshot.js";
 
 describe("tailFrameTime", () => {
   it("backs off ~3% of duration so the final frame isn't the blank exact-end", () => {
@@ -57,5 +60,43 @@ describe("computeSnapshotTimes (FINDING [7]: tail is always captured)", () => {
     });
     expect(times).toEqual([1, 2]);
     expect(appendedTail).toBe(false);
+  });
+});
+
+// Regression: every `snapshot` run unconditionally wiped the output
+// directory's existing .png/.jpg files before capturing new ones, so two
+// consecutive runs with different --at sets clobbered each other with no
+// way to opt out. cleanSnapshotDir is now a separate, callable-or-skippable
+// step (see the --clean/--no-clean flag) instead of being inlined and
+// unconditional.
+describe("cleanSnapshotDir", () => {
+  it("deletes existing image files in the directory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "snapshot-clean-"));
+    writeFileSync(join(dir, "frame-1.png"), "stub");
+    writeFileSync(join(dir, "frame-2.jpg"), "stub");
+    try {
+      cleanSnapshotDir(dir);
+      expect(readdirSync(dir)).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("only removes image files, leaving other files untouched", () => {
+    const dir = mkdtempSync(join(tmpdir(), "snapshot-clean-scope-"));
+    writeFileSync(join(dir, "frame.png"), "stub");
+    writeFileSync(join(dir, "descriptions.md"), "keep me");
+    try {
+      cleanSnapshotDir(dir);
+      expect(readdirSync(dir)).toEqual(["descriptions.md"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not throw when the directory does not exist", () => {
+    expect(() =>
+      cleanSnapshotDir(join(tmpdir(), "snapshot-clean-missing-nonexistent")),
+    ).not.toThrow();
   });
 });
