@@ -84,7 +84,60 @@ to a scratch dir outside the repo.
   select programmatically, bypassing hit-testing. Use coordinate clicks on visible pixels
   for selection tests.
 
-## Full matrix
+## Full matrix (post selection + U3 fixes, embedded mode, locally built CLI)
 
-Pending U3 failure-surfacing landing. Columns: input x archetype, signals (disk/HTTP/console),
-survival after reload, bucket.
+Instrument: scripted agent-browser runner (`matrix-runner.mjs`, session scratchpad) + interactive
+follow-ups. Signals per cell: patch/gsap-mutation HTTP response, disk content, computed style,
+reload survival.
+
+### Selection (click on canvas, Inspector enabled)
+
+| Archetype               | Result                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| Static text (h1)        | selects the element itself                                                                        |
+| Multi-span child (span) | selects the span itself                                                                           |
+| GSAP-tweened box        | selects the element                                                                               |
+| Keyframed box           | selects the element                                                                               |
+| Image                   | selects the element (canEditStyles true)                                                          |
+| Shape div               | selects the element                                                                               |
+| Video                   | selects the element (visible only inside its clip window; hidden outside, correctly unselectable) |
+| Runtime caption word    | falls back to the parent host (runtime nodes cannot persist; by design)                           |
+| Sub-composition child   | selects the child with sourceFile pointing at the sub-composition file                            |
+
+### Inputs (all persist to disk with matched:true/changed:true and survive reload)
+
+- Text on h1: size, content, weight, line-height, letter-spacing, align, case, style. Span-self
+  size also works.
+- Layout on shape: W, H, rotation persist as `tl.set(...)` in the GSAP script (designed manual-edit
+  path); z-index persists inline.
+- 3D: rotationX persists via the `gsap-mutations` endpoint (ok:true, changed:true).
+- GSAP-tweened element: Layout X persists as `gsap.set("#qa-tween-box", { x: 40 })` appended to the
+  script. Works; note: a load-time `gsap.set` on an element that also has an x tween is semantically
+  debatable (starting value shifts) — flag for maintainers, not a broken input.
+- Timing: start persists as `data-start="0.20"` (normalized to 2 decimals).
+- Video section (titled "Video", not "Media"): volume slider persists `data-volume="0.8"`;
+  object-fit select persists `object-fit: cover`.
+- Transparency: opacity range persists `opacity: 0.8`; blend select persists
+  `mix-blend-mode: multiply`.
+- Radius text input persists `border-radius: 24px`; Effects blur range persists `blur(4px)`;
+  Clip overflow select persists `overflow: hidden`.
+- Sub-composition child: Text size persists to `compositions/qa-sub.html` (`font-size: 48px`).
+
+### Confirmed bugs
+
+- **U4 child text-field escaping** (persist-level, confirmed by the headless harness test
+  "documents U4 bug: child text-field style persists as escaped markup"): editing a child field of
+  a multi-field element serializes markup into a `text-content` op that the server escapes.
+
+### Notes and paper cuts (not input bugs)
+
+- Inspector defaults OFF on a fresh embedded-mode load; canvas clicks silently do nothing until it
+  is toggled on. Zero feedback for the user in that state.
+- Fill color picker: opens with a hex input reflecting the current color; persist path verified
+  green by the headless harness (fill style op); scripted popup commit was flaky (focus-sensitive
+  popup), verified manually instead.
+- Color grading section absent for img/video: expected (flag `VITE_STUDIO_ENABLE_COLOR_GRADING`
+  defaults off).
+- Automation notes: media/timing cells must run with the playhead inside the clip window (a
+  data-start edit hides the element at t=0, which is correct but confuses naive re-runs); commit
+  fires on Enter/blur only when the draft differs from the last value.
