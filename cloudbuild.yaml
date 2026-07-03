@@ -1,0 +1,14 @@
+steps:
+  # Step 1: Build the image using the root directory as the context
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "eu-west4-docker.pkg.dev/vorker-485108/cloudrun/hyperframes-render:v1"
+      - "-f"
+      - "packages/gcp-cloud-run/Dockerfile" # <-- CHANGE THIS to the relative path of your Dockerfile (e.g., src/render-service/Dockerfile)
+      - "." # <-- The dot means "use the entire root folder as the context"
+
+# Step 2: Push the completed image to Artifact Registry
+images:
+  - "eu-west4-docker.pkg.dev/vorker-485108/cloudrun/hyperframes-render:v1"
