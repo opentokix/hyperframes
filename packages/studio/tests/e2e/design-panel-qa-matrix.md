@@ -68,7 +68,23 @@ root cause is the **selection layer**, not the persist pipeline.
 - GSAP warning noise in console: `GSAP target #a-roll not found` (from the warm-grain
   captions comp; unrelated).
 
+## Selection-layer fixes: embedded-mode re-verification (post-fix)
+
+Environment: locally built CLI (commit with selection fixes), embedded mode, fixture copied
+to a scratch dir outside the repo.
+
+- Click on empty canvas over the invisible full-canvas overlay: selection resolves to
+  **null** (previously: selected the overlay). S0.1 fixed for real pointer input.
+- Click on visible fixture text (`#qa-headline`): selects the H1 itself; panel shows real
+  values (Size 48px, weight 700, content "Static Headline") instead of overlay defaults.
+- Font size commit 96px: `patch-element` 200 `matched:true, changed:true`; disk gains
+  `<h1 style="font-size: 96px" ...>`; preview renders 96px. The demo scenario works.
+- Note for future automation: `agent-browser click @ref` on an element whose DOM box is
+  off-viewport can land on the sidebar "Select off-canvas element" helper buttons and
+  select programmatically, bypassing hit-testing. Use coordinate clicks on visible pixels
+  for selection tests.
+
 ## Full matrix
 
-Pending U1 fixture + U3 failure-surfacing. Columns: input x archetype, signals (disk/HTTP/console),
+Pending U3 failure-surfacing landing. Columns: input x archetype, signals (disk/HTTP/console),
 survival after reload, bucket.
