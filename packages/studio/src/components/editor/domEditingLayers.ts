@@ -172,6 +172,32 @@ export function buildDefaultDomEditTextField(base?: Partial<DomEditTextField>): 
   };
 }
 
+export interface DomEditChildLocator {
+  childSelector: string;
+  childIndex: number;
+}
+
+export function buildTextFieldChildLocator(
+  fields: DomEditTextField[],
+  fieldKey: string,
+): DomEditChildLocator | null {
+  const fieldIndex = fields.findIndex((field) => field.key === fieldKey);
+  const field = fields[fieldIndex];
+  if (!field || field.source !== "child") return null;
+
+  let childIndex = 0;
+  for (const priorField of fields.slice(0, fieldIndex)) {
+    if (priorField.source === "child" && priorField.tagName === field.tagName) {
+      childIndex += 1;
+    }
+  }
+
+  return {
+    childSelector: `:scope > ${field.tagName}`,
+    childIndex,
+  };
+}
+
 // ─── Capabilities ────────────────────────────────────────────────────────────
 
 /**
@@ -276,8 +302,11 @@ async function probeSourceElement(
       },
     );
     if (!response.ok) return true;
-    const data = (await response.json()) as { exists?: boolean };
-    return data.exists !== false;
+    const data = await response.json();
+    if (data && typeof data === "object" && "exists" in data && data.exists === false) {
+      return false;
+    }
+    return true;
   } catch {
     return true;
   }
@@ -475,19 +504,28 @@ export function collectDomEditLayerItems(
 
 // ─── Patch operations ────────────────────────────────────────────────────────
 
-export function buildDomEditStylePatchOperation(property: string, value: string): PatchOperation {
+export function buildDomEditStylePatchOperation(
+  property: string,
+  value: string | null,
+  childLocator?: DomEditChildLocator,
+): PatchOperation {
   return {
     type: "inline-style",
     property,
     value,
+    ...childLocator,
   };
 }
 
-export function buildDomEditTextPatchOperation(value: string): PatchOperation {
+export function buildDomEditTextPatchOperation(
+  value: string,
+  childLocator?: DomEditChildLocator,
+): PatchOperation {
   return {
     type: "text-content",
     property: "text",
     value,
+    ...childLocator,
   };
 }
 

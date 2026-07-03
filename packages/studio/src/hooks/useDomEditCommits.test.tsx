@@ -174,6 +174,25 @@ function renderDomEditCommits(selection: DomEditSelection, iframe: HTMLIFrameEle
   } satisfies RenderedDomEditCommits;
 }
 
+async function commitStyleAgainst(response: Parameters<typeof stubPatchFetch>[0]) {
+  stubPatchFetch(response);
+  const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const { iframe, element } = createPreviewElement();
+  const rendered = renderDomEditCommits(createSelection(element), iframe);
+  await act(async () => {
+    await rendered.hook.handleDomStyleCommit("color", "blue");
+  });
+  return {
+    element,
+    rendered,
+    warnSpy,
+    cleanup: () => {
+      warnSpy.mockRestore();
+      rendered.cleanup();
+    },
+  };
+}
+
 describe("useDomEditCommits style persist handling", () => {
   beforeEach(() => {
     ensureCssEscape();
@@ -183,16 +202,13 @@ describe("useDomEditCommits style persist handling", () => {
   });
 
   it("toasts and reverts a style commit when the server cannot resolve the source element", async () => {
-    stubPatchFetch({ ok: true, changed: false, matched: false });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { iframe, element } = createPreviewElement();
-    const rendered = renderDomEditCommits(createSelection(element), iframe);
+    const { element, rendered, cleanup } = await commitStyleAgainst({
+      ok: true,
+      changed: false,
+      matched: false,
+    });
 
     try {
-      await act(async () => {
-        await rendered.hook.handleDomStyleCommit("color", "blue");
-      });
-
       expect(rendered.showToast).toHaveBeenCalledWith(
         expect.stringMatching(/Couldn't save "Hero title": Couldn't find this element/),
         "error",
@@ -203,75 +219,56 @@ describe("useDomEditCommits style persist handling", () => {
         expect.objectContaining({ target_source_file: "index.html" }),
       );
     } finally {
-      warnSpy.mockRestore();
-      rendered.cleanup();
+      cleanup();
     }
   });
 
   it("warns without a toast when the server matched the element but reported no change", async () => {
-    stubPatchFetch({ ok: true, changed: false, matched: true });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { iframe, element } = createPreviewElement();
-    const rendered = renderDomEditCommits(createSelection(element), iframe);
+    const { rendered, warnSpy, cleanup } = await commitStyleAgainst({
+      ok: true,
+      changed: false,
+      matched: true,
+    });
 
     try {
-      await act(async () => {
-        await rendered.hook.handleDomStyleCommit("color", "blue");
-      });
-
       expect(rendered.showToast).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
         "[Studio] DOM edit persist no-op",
         expect.objectContaining({ operations: "inline-style:color" }),
       );
     } finally {
-      warnSpy.mockRestore();
-      rendered.cleanup();
+      cleanup();
     }
   });
 
   it("toasts and reverts a style commit when the patch request rejects", async () => {
-    stubPatchFetch(new Error("network down"));
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { iframe, element } = createPreviewElement();
-    const rendered = renderDomEditCommits(createSelection(element), iframe);
+    const { element, rendered, cleanup } = await commitStyleAgainst(new Error("network down"));
 
     try {
-      await act(async () => {
-        await rendered.hook.handleDomStyleCommit("color", "blue");
-      });
-
       expect(rendered.showToast).toHaveBeenCalledWith(
         'Couldn\'t save "Hero title": network down',
         "error",
       );
       expect(element.style.getPropertyValue("color")).toBe("red");
     } finally {
-      warnSpy.mockRestore();
-      rendered.cleanup();
+      cleanup();
     }
   });
 
   it("keeps the optimistic style and records history when the patch succeeds", async () => {
-    stubPatchFetch({
+    const { element, rendered, cleanup } = await commitStyleAgainst({
       ok: true,
       changed: true,
       matched: true,
       content: '<div data-hf-id="hf-card" style="color: blue">Card</div>',
     });
-    const { iframe, element } = createPreviewElement();
-    const rendered = renderDomEditCommits(createSelection(element), iframe);
 
     try {
-      await act(async () => {
-        await rendered.hook.handleDomStyleCommit("color", "blue");
-      });
-
       expect(rendered.showToast).not.toHaveBeenCalled();
       expect(element.style.getPropertyValue("color")).toBe("blue");
       expect(rendered.recordEdit).toHaveBeenCalledTimes(1);
     } finally {
-      rendered.cleanup();
+      cleanup();
     }
   });
 });

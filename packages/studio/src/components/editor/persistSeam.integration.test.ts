@@ -12,11 +12,9 @@ import {
   buildDomEditPatchTarget,
   buildDomEditStylePatchOperation,
   buildDomEditTextPatchOperation,
-  serializeDomEditTextFields,
 } from "./domEditingLayers";
 import { buildPathOffsetPatches } from "./manualEditsDomPatches";
 import { STUDIO_OFFSET_X_PROP, STUDIO_PATH_OFFSET_ATTR } from "./manualEditsTypes";
-import type { DomEditTextField } from "./domEditingTypes";
 import { makeSelection } from "../../hooks/domSelectionTestHarness";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
@@ -194,41 +192,48 @@ describe("persist seam source mutation", () => {
     expect(result.html).toBe(indexHtml);
   });
 
-  it("documents U4 bug: child text-field style persists as escaped markup", () => {
-    const fields: DomEditTextField[] = [
-      {
-        key: "qa-line-a",
-        label: "Text 1",
-        value: "First styled line",
-        tagName: "span",
-        attributes: [
-          { name: "class", value: "qa-line-a" },
-          { name: "data-hf-text-key", value: "qa-line-a" },
-        ],
-        inlineStyles: { color: "#0000ff" },
-        computedStyles: {},
-        source: "child",
-      },
-      {
-        key: "qa-line-b",
-        label: "Text 2",
-        value: "Second styled line",
-        tagName: "span",
-        attributes: [
-          { name: "class", value: "qa-line-b" },
-          { name: "data-hf-text-key", value: "qa-line-b" },
-        ],
-        inlineStyles: {},
-        computedStyles: {},
-        source: "child",
-      },
-    ];
-    const serialized = serializeDomEditTextFields(fields);
+  it("fixes U4: child text-field style persists as an inline style on the correct child span", () => {
     const html = patchAndExpectChange(indexHtml, { hfId: "qa-multi" }, [
-      buildDomEditTextPatchOperation(serialized),
+      buildDomEditStylePatchOperation("color", "#0000ff", {
+        childSelector: ":scope > span",
+        childIndex: 0,
+      }),
     ]);
 
-    expect(html).toContain("&lt;span");
-    expect(findByHfId(html, "qa-multi").textContent).toContain("<span");
+    const lineA = findElementInHtml(html, ".qa-line-a");
+    const lineB = findElementInHtml(html, ".qa-line-b");
+    expect(lineA.getAttribute("style")).toContain("color: #0000ff");
+    expect(lineB.getAttribute("style")).toBeNull();
+    expect(lineB.textContent).toBe("Second styled line");
+    expect(html).not.toContain("&lt;span");
+  });
+
+  it("targets the second direct child when siblings share the same tag and class", () => {
+    const source = `<div data-hf-id="dups"><span class="dup">First</span><span class="dup">Second</span></div>`;
+    const html = patchAndExpectChange(source, { hfId: "dups" }, [
+      buildDomEditStylePatchOperation("color", "#0000ff", {
+        childSelector: ":scope > span",
+        childIndex: 1,
+      }),
+    ]);
+
+    const document = parseHtml(html);
+    const spans = Array.from(document.querySelectorAll(".dup"));
+    expect(spans[0]?.getAttribute("style")).toBeNull();
+    expect(spans[1]?.getAttribute("style")).toContain("color: #0000ff");
+  });
+
+  it("persists a child text-field content edit as plain text", () => {
+    const value = "A < B & C";
+    const html = patchAndExpectChange(indexHtml, { hfId: "qa-multi" }, [
+      buildDomEditTextPatchOperation(value, {
+        childSelector: ":scope > span",
+        childIndex: 0,
+      }),
+    ]);
+
+    expect(findElementInHtml(html, ".qa-line-a").textContent).toBe(value);
+    expect(findElementInHtml(html, ".qa-line-b").textContent).toBe("Second styled line");
+    expect(html).not.toContain("&lt;span");
   });
 });

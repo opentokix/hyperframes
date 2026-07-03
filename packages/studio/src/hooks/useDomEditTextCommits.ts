@@ -23,6 +23,7 @@ import {
 } from "../components/editor/domEditing";
 import type { ImportedFontAsset } from "../components/editor/fontAssets";
 import type { PersistDomEditOperations } from "./domEditCommitTypes";
+import { buildTextFieldChildOperations } from "./domEditTextFieldCommitOps";
 import { reportDomEditPersistFailure } from "./domEditPersistFailure";
 
 // ── Types ──
@@ -87,6 +88,7 @@ export function useDomEditTextCommits({
 }: UseDomEditTextCommitsParams) {
   const domTextCommitVersionRef = useRef(0);
 
+  // fallow-ignore-next-line complexity
   const handleDomStyleCommit = useCallback(
     async (property: string, value: string) => {
       if (!domEditSelection) return;
@@ -256,6 +258,7 @@ export function useDomEditTextCommits({
     ],
   );
 
+  // fallow-ignore-next-line complexity
   const handleDomTextCommit = useCallback(
     async (value: string, fieldKey?: string) => {
       if (!domEditSelection) return;
@@ -268,26 +271,27 @@ export function useDomEditTextCommits({
               field.key === fieldKey ? { ...field, value } : field,
             )
           : [];
-      const nextContent =
-        nextTextFields.length > 1 || nextTextFields.some((field) => field.source === "child")
-          ? serializeDomEditTextFields(nextTextFields)
-          : value;
+      const usesSerializedTextFields =
+        nextTextFields.length > 1 || nextTextFields.some((field) => field.source === "child");
+      const nextContent = usesSerializedTextFields
+        ? serializeDomEditTextFields(nextTextFields)
+        : value;
       const iframe = previewIframeRef.current;
       const doc = iframe?.contentDocument;
       if (doc) {
         const el = findElementForSelection(doc, domEditSelection, activeCompPath);
         if (el) {
-          if (
-            nextTextFields.length > 1 ||
-            nextTextFields.some((field) => field.source === "child")
-          ) {
+          if (usesSerializedTextFields) {
             el.innerHTML = nextContent;
           } else {
             el.textContent = value;
           }
         }
       }
-      const operations = [buildDomEditTextPatchOperation(nextContent)];
+      const childOperations = usesSerializedTextFields
+        ? buildTextFieldChildOperations(domEditSelection.textFields, nextTextFields)
+        : null;
+      const operations = childOperations ?? [buildDomEditTextPatchOperation(nextContent)];
       try {
         await persistDomEditOperations(domEditSelection, operations, {
           label: "Edit text",
@@ -320,26 +324,25 @@ export function useDomEditTextCommits({
     ],
   );
 
+  // fallow-ignore-next-line complexity
   const commitDomTextFields = useCallback(
     async (
       selection: DomEditSelection,
       nextTextFields: DomEditTextField[],
       options?: { importedFont?: ImportedFontAsset | null },
     ) => {
-      const nextContent =
-        nextTextFields.length > 1 || nextTextFields.some((field) => field.source === "child")
-          ? serializeDomEditTextFields(nextTextFields)
-          : (nextTextFields[0]?.value ?? "");
+      const usesSerializedTextFields =
+        nextTextFields.length > 1 || nextTextFields.some((field) => field.source === "child");
+      const nextContent = usesSerializedTextFields
+        ? serializeDomEditTextFields(nextTextFields)
+        : (nextTextFields[0]?.value ?? "");
 
       const iframe = previewIframeRef.current;
       const doc = iframe?.contentDocument;
       if (doc) {
         const el = findElementForSelection(doc, selection, activeCompPath);
         if (el) {
-          if (
-            nextTextFields.length > 1 ||
-            nextTextFields.some((field) => field.source === "child")
-          ) {
+          if (usesSerializedTextFields) {
             el.innerHTML = nextContent;
           } else {
             el.textContent = nextContent;
@@ -348,7 +351,10 @@ export function useDomEditTextCommits({
       }
 
       const importedFont = options?.importedFont ?? null;
-      const operations = [buildDomEditTextPatchOperation(nextContent)];
+      const childOperations = usesSerializedTextFields
+        ? buildTextFieldChildOperations(selection.textFields, nextTextFields)
+        : null;
+      const operations = childOperations ?? [buildDomEditTextPatchOperation(nextContent)];
       try {
         await persistDomEditOperations(selection, operations, {
           label: "Edit text",
