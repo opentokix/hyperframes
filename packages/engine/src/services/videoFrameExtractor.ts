@@ -87,7 +87,7 @@ export interface ExtractionOptions {
  *
  * Used by the producer to surface `perfSummary.videoExtractBreakdown` — without
  * this breakdown, a single `videoExtractMs` stage timing hides where cost lives
- * (HDR preflight, VFR preflight, per-video ffmpeg extract) when tuning renders.
+ * (HDR preflight, VFR classification, per-video ffmpeg extract) when tuning renders.
  *
  * Field semantics:
  *   - *Ms fields are wall-clock durations inside each phase.
@@ -97,6 +97,8 @@ export interface ExtractionOptions {
  *   - hdrPreflightMs / vfrPreflightMs both include their probe-time sibling
  *     (hdrProbeMs / vfrProbeMs) for symmetric semantics. The probe-only fields
  *     are a finer decomposition, not a separate carve-out.
+ *   - vfrPreflightCount reports sources classified as VFR and routed through
+ *     the one-pass `-fps_mode cfr -r` extraction path.
  */
 export interface ExtractionPhaseBreakdown {
   resolveMs: number;
@@ -267,11 +269,15 @@ export async function extractVideoFramesRange(
     // VideoToolbox tone-maps during decode; force output to bt709 SDR format
     vfFilters.push("format=nv12");
   }
-  vfFilters.push(`fps=${fps}`);
-  args.push("-vf", vfFilters.join(","));
+  if (!metadata.isVFR) {
+    vfFilters.push(`fps=${fps}`);
+  }
+  if (vfFilters.length > 0) args.push("-vf", vfFilters.join(","));
+  if (metadata.isVFR) args.push("-fps_mode", "cfr", "-r", String(fps));
 
   args.push("-q:v", format === "jpg" ? String(Math.ceil((100 - quality) / 3)) : "0");
-  if (format === "png") args.push("-compression_level", "6");
+  // Render-scoped temp frames are read once; level 1 measured 3-5x faster for ~14% larger files.
+  if (format === "png") args.push("-compression_level", "1");
   args.push("-y", outputPattern);
 
   return new Promise((resolve, reject) => {
@@ -355,7 +361,6 @@ export async function extractVideoFramesRange(
  * `startTime` and `duration` bound the re-encode to the segment the composition
  * actually uses. Without them a 30-minute screen recording that contributes a
  * 2-second clip was transcoded in full — a >100× waste for long sources.
- * Mirrors the segment-scope fix already applied to the VFR→CFR preflight.
  */
 async function convertSdrToHdr(
   inputPath: string,
@@ -454,62 +459,6 @@ export function resolveFrameFormat(
   if (metadata.hasAlpha || codecMayHaveAlpha(metadata.videoCodec)) return "png";
   if (requested === "png" || requested === "jpg") return requested;
   return "jpg";
-}
-
-/**
- * Re-encode a VFR (variable frame rate) video segment to CFR so the downstream
- * fps filter can extract frames reliably. Screen recordings, phone videos, and
- * some webcams emit irregular timestamps that cause two failure modes:
- *   1. Output has fewer frames than expected (e.g. -ss 3 -t 4 produces 90
- *      frames instead of 120 @ 30fps). FrameLookupTable.getFrameAtTime then
- *      returns null for late timestamps and the caller freezes on the last
- *      valid frame.
- *   2. Large duplicate-frame runs where source PTS don't land on target
- *      timestamps.
- *
- * Only the [startTime, startTime+duration] window is re-encoded, so long
- * recordings aren't fully transcoded when only a short clip is used.
- */
-async function convertVfrToCfr(
-  inputPath: string,
-  outputPath: string,
-  targetFps: number,
-  startTime: number,
-  duration: number,
-  signal?: AbortSignal,
-  config?: Partial<Pick<EngineConfig, "ffmpegProcessTimeout">>,
-): Promise<void> {
-  const timeout = config?.ffmpegProcessTimeout ?? DEFAULT_CONFIG.ffmpegProcessTimeout;
-
-  const args = [
-    "-ss",
-    String(startTime),
-    "-i",
-    inputPath,
-    "-t",
-    String(duration),
-    "-fps_mode",
-    "cfr",
-    "-r",
-    String(targetFps),
-    "-c:v",
-    "libx264",
-    "-preset",
-    "fast",
-    "-crf",
-    "18",
-    "-c:a",
-    "copy",
-    "-y",
-    outputPath,
-  ];
-
-  const result = await runFfmpeg(args, { signal, timeout });
-  if (!result.success) {
-    throw new Error(
-      `VFR→CFR conversion failed (exit ${result.exitCode}): ${result.stderr.slice(-300)}`,
-    );
-  }
 }
 
 /**
@@ -647,8 +596,8 @@ export async function extractAllVideoFrames(
 
   // Snapshot the pre-preflight key inputs so the extraction cache keys on the
   // user-visible source (original path, original mediaStart, original segment
-  // bounds) rather than the workDir-local normalized file produced by
-  // Phase 2a/2b preflight. Without this, every render would write a new
+  // bounds) rather than the workDir-local normalized file produced by the
+  // HDR preflight. Without this, every render would write a new
   // normalized file with a fresh mtime → fresh cache key → perpetual misses.
   const cacheKeyInputs = resolvedVideos.map(({ video, videoPath }) => {
     const stat = readKeyStat(videoPath);
@@ -740,7 +689,7 @@ export async function extractAllVideoFrames(
           entry.videoPath = convertedPath;
           // Segment-scoped re-encode starts the new file at t=0, so downstream
           // extraction must seek from 0, not the original mediaStart. Shallow-copy
-          // to avoid mutating the caller's VideoElement (mirrors the VFR fix).
+          // to avoid mutating the caller's VideoElement.
           entry.video = { ...entry.video, mediaStart: 0 };
           breakdown.hdrPreflightCount += 1;
         } catch (err) {
@@ -755,8 +704,8 @@ export async function extractAllVideoFrames(
   breakdown.hdrPreflightMs = Date.now() - hdrPreflightStart;
 
   // Remove HDR-preflight-skipped entries from every parallel array so Phase 2b
-  // (VFR) and Phase 3 (extract) don't re-process them. Iterate backwards to
-  // keep indices stable while splicing.
+  // (VFR classification) and Phase 3 (extract) don't re-process them. Iterate
+  // backwards to keep indices stable while splicing.
   if (hdrSkippedIndices.size > 0) {
     for (let i = resolvedVideos.length - 1; i >= 0; i--) {
       if (hdrSkippedIndices.has(i)) {
@@ -771,10 +720,9 @@ export async function extractAllVideoFrames(
     }
   }
 
-  // Phase 2b: Re-encode VFR inputs to CFR so the fps filter in Phase 3 produces
-  // the expected frame count. Only the used segment is transcoded.
+  // Phase 2b: Keep VFR observability while routing VFR inputs through the
+  // one-pass CFR extraction path in Phase 3.
   const vfrPreflightStart = Date.now();
-  const vfrNormDir = join(options.outputDir, "_vfr_normalized");
   for (let i = 0; i < resolvedVideos.length; i++) {
     if (signal?.aborted) break;
     const entry = resolvedVideos[i];
@@ -782,38 +730,7 @@ export async function extractAllVideoFrames(
     const vfrProbeStart = Date.now();
     const metadata = await extractMediaMetadata(entry.videoPath);
     breakdown.vfrProbeMs += Date.now() - vfrProbeStart;
-    if (!metadata.isVFR) continue;
-
-    let segDuration = entry.video.end - entry.video.start;
-    if (!Number.isFinite(segDuration) || segDuration <= 0) {
-      const sourceRemaining = metadata.durationSeconds - entry.video.mediaStart;
-      segDuration = sourceRemaining > 0 ? sourceRemaining : metadata.durationSeconds;
-    }
-
-    mkdirSync(vfrNormDir, { recursive: true });
-    const normalizedPath = join(vfrNormDir, `${entry.video.id}_cfr.mp4`);
-    try {
-      await convertVfrToCfr(
-        entry.videoPath,
-        normalizedPath,
-        options.fps,
-        entry.video.mediaStart,
-        segDuration,
-        signal,
-        config,
-      );
-      entry.videoPath = normalizedPath;
-      // Segment-scoped re-encode starts the new file at t=0, so downstream
-      // extraction must seek from 0, not the original mediaStart. Shallow-copy
-      // to avoid mutating the caller's VideoElement.
-      entry.video = { ...entry.video, mediaStart: 0 };
-      breakdown.vfrPreflightCount += 1;
-    } catch (err) {
-      errors.push({
-        videoId: entry.video.id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+    if (metadata.isVFR) breakdown.vfrPreflightCount += 1;
   }
   breakdown.vfrPreflightMs = Date.now() - vfrPreflightStart;
 
@@ -825,17 +742,17 @@ export async function extractAllVideoFrames(
     videoPath: string,
     videoDuration: number,
     i: number,
+    metadata: VideoMetadata,
+    cacheFormat: CacheFrameFormat,
   ): Promise<ExtractedFrames | null> {
     if (!cacheRootDir) return null;
     const keyInput = cacheKeyInputs[i];
-    const probedMeta = videoMetadata[i];
-    if (!keyInput || !probedMeta) return null;
-    const cacheFormat = resolveFrameFormat(probedMeta, options.format);
+    if (!keyInput) return null;
 
     const keyDuration = resolveSegmentDuration(
       keyInput.end - keyInput.start,
       keyInput.mediaStart,
-      probedMeta,
+      metadata,
     );
     const lookup = lookupCacheEntry(cacheRootDir, {
       videoPath: keyInput.videoPath,
@@ -854,7 +771,7 @@ export async function extractAllVideoFrames(
         srcPath: keyInput.videoPath,
         fps: options.fps,
         format: cacheFormat,
-        metadata: probedMeta,
+        metadata,
       });
       return { ...rehydrated, ownedByLookup: true };
     }
@@ -877,43 +794,99 @@ export async function extractAllVideoFrames(
     return { ...result, ownedByLookup: true };
   }
 
-  const results = await Promise.all(
-    resolvedVideos.map(async ({ video, videoPath }, i) => {
+  function extractionError(videoId: string, err: unknown): { videoId: string; error: string } {
+    return { videoId, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  type PreparedExtraction = {
+    video: VideoElement;
+    videoPath: string;
+    index: number;
+    metadata: VideoMetadata;
+    videoDuration: number;
+    format: CacheFrameFormat;
+    dedupeKey: string;
+  };
+
+  type PreparedExtractionResult =
+    | { work: PreparedExtraction }
+    | { error: { videoId: string; error: string } };
+
+  const preparedExtractions: PreparedExtractionResult[] = await Promise.all(
+    resolvedVideos.map(async ({ video, videoPath }, index) => {
       if (signal?.aborted) {
         throw new Error("Video frame extraction cancelled");
       }
       try {
-        const probedMeta = videoMetadata[i] ?? (await extractMediaMetadata(videoPath));
+        const metadata = videoMetadata[index] ?? (await extractMediaMetadata(videoPath));
         const videoDuration = resolveSegmentDuration(
           video.end - video.start,
           video.mediaStart,
-          probedMeta,
+          metadata,
         );
         if (video.end - video.start !== videoDuration) {
           video.end = video.start + videoDuration;
         }
 
-        const cached = await tryCachedExtract(video, videoPath, videoDuration, i);
-        if (cached) return { result: cached };
+        const format = resolveFrameFormat(metadata, options.format);
+        const dedupeKey = `${videoPath}\0${video.mediaStart}\0${videoDuration}\0${options.fps}\0${format}`;
 
-        const result = await extractVideoFramesRange(
-          videoPath,
-          video.id,
-          video.mediaStart,
-          videoDuration,
-          { ...options, format: resolveFrameFormat(probedMeta, options.format) },
-          signal,
-          config,
-        );
-
-        return { result };
-      } catch (err) {
         return {
-          error: {
-            videoId: video.id,
-            error: err instanceof Error ? err.message : String(err),
+          work: {
+            video,
+            videoPath,
+            index,
+            metadata,
+            videoDuration,
+            format,
+            dedupeKey,
           },
         };
+      } catch (err) {
+        return { error: extractionError(video.id, err) };
+      }
+    }),
+  );
+
+  const inFlightExtractions = new Map<string, Promise<ExtractedFrames>>();
+  const results = await Promise.all(
+    preparedExtractions.map(async (prepared) => {
+      if ("error" in prepared) return prepared;
+      const { work } = prepared;
+
+      try {
+        const existing = inFlightExtractions.get(work.dedupeKey);
+        if (existing) {
+          const shared = await existing;
+          return { result: { ...shared, videoId: work.video.id } };
+        }
+
+        const extraction = (async () => {
+          const cached = await tryCachedExtract(
+            work.video,
+            work.videoPath,
+            work.videoDuration,
+            work.index,
+            work.metadata,
+            work.format,
+          );
+          if (cached) return cached;
+
+          return extractVideoFramesRange(
+            work.videoPath,
+            work.video.id,
+            work.video.mediaStart,
+            work.videoDuration,
+            { ...options, format: work.format },
+            signal,
+            config,
+          );
+        })();
+
+        inFlightExtractions.set(work.dedupeKey, extraction);
+        return { result: await extraction };
+      } catch (err) {
+        return { error: extractionError(work.video.id, err) };
       }
     }),
   );
