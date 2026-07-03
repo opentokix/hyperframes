@@ -83,7 +83,7 @@ ENV PATH="/root/.bun/bin:$PATH"
 
 # Install workspace dependencies. Copy manifests first for layer caching.
 COPY package.json ./
-COPY ../../bun.lock ./
+COPY bun.lock ./
 COPY packages/core/package.json packages/core/package.json
 COPY packages/engine/package.json packages/engine/package.json
 COPY packages/player/package.json packages/player/package.json
