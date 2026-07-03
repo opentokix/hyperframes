@@ -749,10 +749,12 @@ function inlineSubCompositions(
       parseHtml: (htmlStr: string) => parseHTML(htmlStr).document as unknown as Document,
       scriptErrorLabel: "[Compiler] Composition script failed",
       // Preserve the authored root wrapper as a child of the host, matching
-      // the preview/runtime shape (compositionLoader's prepareFlattenedInnerRoot).
-      // Without this, the wrapper element (and its class/id) is discarded and
-      // any CSS anchored on it — `.wrapper-class .title`, `#wrapper-id` — is
-      // dead at render time even though it works in preview.
+      // the preview bundler's shape (htmlBundler.ts's prepareFlattenedInnerRoot,
+      // which the runtime compositionLoader mirrors with its own copy for the
+      // live-loaded case). Without this, the wrapper element (and its
+      // class/id) is discarded and any CSS anchored on it —
+      // `.wrapper-class .title`, `#wrapper-id` — is dead at render time even
+      // though it works in preview.
       flattenInnerRoot: prepareFlattenedInnerRoot as (innerRoot: Element) => Element,
       onMissingComposition: (srcPath: string, reason?: string) => {
         // In the render path this is normally unreachable — compileForRender
